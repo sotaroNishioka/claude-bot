@@ -97,7 +97,12 @@ export interface Config {
   };
   claude: {
     apiKey: string;
+    cliPath: string;
     dailyTokenLimit: number;
+  };
+  project: {
+    targetPath: string;
+    claudeBotPath: string;
   };
   database: {
     path: string;
