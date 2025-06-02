@@ -1,8 +1,8 @@
-import { GitHubClient } from './github-client';
-import { MentionTracker } from './database';
-import { MentionEvent } from './types';
-import { logger } from './logger';
 import { config } from './config';
+import type { MentionTracker } from './database';
+import type { GitHubClient } from './github-client';
+import { logger } from './logger';
+import type { MentionEvent } from './types';
 
 export class MentionDetector {
   private githubClient: GitHubClient;
@@ -18,7 +18,7 @@ export class MentionDetector {
     if (this.lastCheckTime) {
       return this.lastCheckTime.toISOString();
     }
-    
+
     // Default to 1 hour ago if no previous check
     const oneHourAgo = new Date();
     oneHourAgo.setHours(oneHourAgo.getHours() - 1);
@@ -27,11 +27,13 @@ export class MentionDetector {
 
   async updateLastCheckTime(): Promise<void> {
     this.lastCheckTime = new Date();
-    logger.debug('Updated last check time', { time: this.lastCheckTime.toISOString() });
+    logger.debug('Updated last check time', {
+      time: this.lastCheckTime.toISOString(),
+    });
   }
 
   async detectNewMentions(since?: string): Promise<MentionEvent[]> {
-    const sinceTime = since || await this.getLastCheckTime();
+    const sinceTime = since || (await this.getLastCheckTime());
     const mentions: MentionEvent[] = [];
 
     try {
@@ -40,7 +42,11 @@ export class MentionDetector {
       // Check issues
       const issues = await this.githubClient.getIssuesSince(sinceTime);
       for (const issue of issues) {
-        const hasChanged = await this.tracker.isContentChanged('issue', issue.number, issue.body || '');
+        const hasChanged = await this.tracker.isContentChanged(
+          'issue',
+          issue.number,
+          issue.body || ''
+        );
         if (hasChanged && this.containsMention(issue.body || '')) {
           mentions.push({
             type: 'issue',
@@ -51,7 +57,12 @@ export class MentionDetector {
             processed: false,
           });
 
-          await this.tracker.recordMention('issue', issue.number, issue.user.login, issue.body || '');
+          await this.tracker.recordMention(
+            'issue',
+            issue.number,
+            issue.user.login,
+            issue.body || ''
+          );
         }
       }
 
@@ -59,7 +70,12 @@ export class MentionDetector {
       const issueComments = await this.githubClient.getIssueCommentsSince(sinceTime);
       for (const comment of issueComments) {
         const issueNumber = this.githubClient.extractIssueNumber(comment.issue_url);
-        const hasChanged = await this.tracker.isContentChanged('issue_comment', comment.id, comment.body, issueNumber);
+        const hasChanged = await this.tracker.isContentChanged(
+          'issue_comment',
+          comment.id,
+          comment.body,
+          issueNumber
+        );
         if (hasChanged && this.containsMention(comment.body)) {
           mentions.push({
             type: 'issue_comment',
@@ -71,7 +87,13 @@ export class MentionDetector {
             processed: false,
           });
 
-          await this.tracker.recordMention('issue_comment', comment.id, comment.user.login, comment.body, issueNumber);
+          await this.tracker.recordMention(
+            'issue_comment',
+            comment.id,
+            comment.user.login,
+            comment.body,
+            issueNumber
+          );
         }
       }
 
@@ -96,8 +118,15 @@ export class MentionDetector {
       // Check PR comments
       const prComments = await this.githubClient.getPullRequestCommentsSince(sinceTime);
       for (const comment of prComments) {
-        const prNumber = this.githubClient.extractPullRequestNumber(comment.issue_url.replace('/issues/', '/pulls/'));
-        const hasChanged = await this.tracker.isContentChanged('pr_comment', comment.id, comment.body, prNumber);
+        const prNumber = this.githubClient.extractPullRequestNumber(
+          comment.issue_url.replace('/issues/', '/pulls/')
+        );
+        const hasChanged = await this.tracker.isContentChanged(
+          'pr_comment',
+          comment.id,
+          comment.body,
+          prNumber
+        );
         if (hasChanged && this.containsMention(comment.body)) {
           mentions.push({
             type: 'pr_comment',
@@ -109,7 +138,13 @@ export class MentionDetector {
             processed: false,
           });
 
-          await this.tracker.recordMention('pr_comment', comment.id, comment.user.login, comment.body, prNumber);
+          await this.tracker.recordMention(
+            'pr_comment',
+            comment.id,
+            comment.user.login,
+            comment.body,
+            prNumber
+          );
         }
       }
 
@@ -119,14 +154,17 @@ export class MentionDetector {
       logger.info('Mention detection completed', {
         since: sinceTime,
         totalMentions: mentions.length,
-        issuesMentions: mentions.filter(m => m.type === 'issue').length,
-        prMentions: mentions.filter(m => m.type === 'pr').length,
-        commentMentions: mentions.filter(m => m.type.includes('comment')).length,
+        issuesMentions: mentions.filter((m) => m.type === 'issue').length,
+        prMentions: mentions.filter((m) => m.type === 'pr').length,
+        commentMentions: mentions.filter((m) => m.type.includes('comment')).length,
       });
 
       return mentions;
     } catch (error) {
-      logger.error('Error during mention detection', { error, since: sinceTime });
+      logger.error('Error during mention detection', {
+        error,
+        since: sinceTime,
+      });
       throw error;
     }
   }
@@ -134,7 +172,7 @@ export class MentionDetector {
   private containsMention(content: string): boolean {
     if (!content) return false;
 
-    return config.mention.patterns.some(pattern => 
+    return config.mention.patterns.some((pattern) =>
       content.toLowerCase().includes(pattern.toLowerCase())
     );
   }

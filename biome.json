@@ -51,11 +51,7 @@
     }
   },
   "files": {
-    "include": [
-      "src/**/*.ts",
-      "src/**/*.js",
-      "ecosystem.config.js"
-    ],
+    "include": ["src/**/*.ts", "src/**/*.js", "ecosystem.config.js"],
     "ignore": [
       "*.md",
       "*.json",

@@ -1,21 +1,21 @@
 {
-  "editor.defaultFormatter": "biomejs.biome",
-  "editor.formatOnSave": true,
-  "editor.codeActionsOnSave": {
-    "quickfix.biome": "explicit",
-    "source.organizeImports.biome": "explicit"
-  },
-  "typescript.preferences.importModuleSpecifier": "relative",
-  "files.exclude": {
-    "dist/": true,
-    "node_modules/": true,
-    "*.db": true,
-    "logs/": true,
-    "backups/": true
-  },
-  "search.exclude": {
-    "dist/": true,
-    "node_modules/": true,
-    "logs/": true
-  }
+	"editor.defaultFormatter": "biomejs.biome",
+	"editor.formatOnSave": true,
+	"editor.codeActionsOnSave": {
+		"quickfix.biome": "explicit",
+		"source.organizeImports.biome": "explicit"
+	},
+	"typescript.preferences.importModuleSpecifier": "relative",
+	"files.exclude": {
+		"dist/": true,
+		"node_modules/": true,
+		"*.db": true,
+		"logs/": true,
+		"backups/": true
+	},
+	"search.exclude": {
+		"dist/": true,
+		"node_modules/": true,
+		"logs/": true
+	}
 }

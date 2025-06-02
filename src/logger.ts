@@ -1,7 +1,7 @@
+import { mkdir } from 'node:fs/promises';
+import { dirname } from 'node:path';
 import winston from 'winston';
 import { config } from './config';
-import { mkdir } from 'fs/promises';
-import { dirname } from 'path';
 
 // ログディレクトリを作成
 const logDir = dirname(config.logging.file);
@@ -23,7 +23,7 @@ export const logger = winston.createLogger({
       maxFiles: 5,
       tailable: true,
     }),
-    
+
     // エラーレベルは別ファイル
     new winston.transports.File({
       filename: config.logging.file.replace('.log', '-error.log'),

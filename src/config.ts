@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import dotenv from 'dotenv';
-import { Config } from './types';
+import type { Config } from './types';
 
 dotenv.config();
 

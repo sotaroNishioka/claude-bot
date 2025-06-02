@@ -1,5 +1,5 @@
-import { readFileSync, existsSync } from 'fs';
-import { resolve } from 'path';
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { resolvedPaths } from './config';
 import { logger } from './logger';
 
@@ -7,7 +7,9 @@ export class PromptManager {
   /**
    * メンションタイプに応じたプロンプトファイル名を取得
    */
-  getPromptFileForMentionType(mentionType: 'issue' | 'issue_comment' | 'pr' | 'pr_comment'): string {
+  getPromptFileForMentionType(
+    mentionType: 'issue' | 'issue_comment' | 'pr' | 'pr_comment'
+  ): string {
     return `${mentionType}.txt`;
   }
 
@@ -16,7 +18,7 @@ export class PromptManager {
    */
   loadAndProcessPrompt(promptFile: string, userRequest: string): string {
     const promptPath = resolve(resolvedPaths.prompts, promptFile);
-    
+
     if (!existsSync(promptPath)) {
       logger.warn(`Prompt file not found: ${promptFile}, using direct content`);
       return userRequest;

@@ -1,7 +1,7 @@
 import { Octokit } from '@octokit/rest';
-import { GitHubIssue, GitHubComment, GitHubPullRequest } from './types';
-import { logger } from './logger';
 import { config } from './config';
+import { logger } from './logger';
+import type { GitHubComment, GitHubIssue, GitHubPullRequest } from './types';
 
 export class GitHubClient {
   private octokit: Octokit;
@@ -27,8 +27,8 @@ export class GitHubClient {
       });
 
       // Filter out pull requests (GitHub API includes PRs in issues)
-      const issues = data.filter(issue => !issue.pull_request) as GitHubIssue[];
-      
+      const issues = data.filter((issue) => !issue.pull_request) as GitHubIssue[];
+
       logger.debug('Fetched issues since', { since, count: issues.length });
       return issues;
     } catch (error) {
@@ -47,9 +47,12 @@ export class GitHubClient {
       });
 
       // Filter by update time since GitHub API doesn't support 'since' for PRs
-      const pullRequests = data.filter(pr => pr.updated_at > since) as GitHubPullRequest[];
-      
-      logger.debug('Fetched pull requests since', { since, count: pullRequests.length });
+      const pullRequests = data.filter((pr) => pr.updated_at > since) as GitHubPullRequest[];
+
+      logger.debug('Fetched pull requests since', {
+        since,
+        count: pullRequests.length,
+      });
       return pullRequests;
     } catch (error) {
       logger.error('Error fetching pull requests', { error, since });
@@ -66,7 +69,10 @@ export class GitHubClient {
         per_page: 100,
       });
 
-      logger.debug('Fetched issue comments since', { since, count: data.length });
+      logger.debug('Fetched issue comments since', {
+        since,
+        count: data.length,
+      });
       return data as GitHubComment[];
     } catch (error) {
       logger.error('Error fetching issue comments', { error, since });
@@ -85,7 +91,7 @@ export class GitHubClient {
       });
 
       // Convert to common format
-      const comments: GitHubComment[] = reviewComments.map(comment => ({
+      const comments: GitHubComment[] = reviewComments.map((comment) => ({
         id: comment.id,
         issue_url: comment.pull_request_url.replace('/pulls/', '/issues/'),
         body: comment.body,
@@ -94,7 +100,10 @@ export class GitHubClient {
         updated_at: comment.updated_at,
       }));
 
-      logger.debug('Fetched PR comments since', { since, count: comments.length });
+      logger.debug('Fetched PR comments since', {
+        since,
+        count: comments.length,
+      });
       return comments;
     } catch (error) {
       logger.error('Error fetching PR comments', { error, since });
@@ -110,8 +119,11 @@ export class GitHubClient {
         issue_number: issueNumber,
         body,
       });
-      
-      logger.info('Issue comment added', { issueNumber, bodyLength: body.length });
+
+      logger.info('Issue comment added', {
+        issueNumber,
+        bodyLength: body.length,
+      });
     } catch (error) {
       logger.error('Error adding issue comment', { error, issueNumber });
       throw error;
@@ -126,7 +138,7 @@ export class GitHubClient {
         issue_number: pullNumber,
         body,
       });
-      
+
       logger.info('PR comment added', { pullNumber, bodyLength: body.length });
     } catch (error) {
       logger.error('Error adding PR comment', { error, pullNumber });
@@ -139,7 +151,7 @@ export class GitHubClient {
     if (!match) {
       throw new Error(`Invalid issue URL: ${issueUrl}`);
     }
-    return parseInt(match[1], 10);
+    return Number.parseInt(match[1], 10);
   }
 
   extractPullRequestNumber(prUrl: string): number {
@@ -147,7 +159,7 @@ export class GitHubClient {
     if (!match) {
       throw new Error(`Invalid PR URL: ${prUrl}`);
     }
-    return parseInt(match[1], 10);
+    return Number.parseInt(match[1], 10);
   }
 
   async getRepositoryInfo() {
@@ -156,7 +168,7 @@ export class GitHubClient {
         owner: this.owner,
         repo: this.repo,
       });
-      
+
       return {
         name: data.name,
         fullName: data.full_name,

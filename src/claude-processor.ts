@@ -2,10 +2,10 @@ import { spawn } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { config, resolvedPaths } from './config';
-import { MentionTracker } from './database';
-import { GitHubClient } from './github-client';
+import type { MentionTracker } from './database';
+import type { GitHubClient } from './github-client';
 import { logger } from './logger';
-import { MentionEvent } from './types';
+import type { MentionEvent } from './types';
 
 export class ClaudeProcessor {
   private githubClient: GitHubClient;
@@ -39,13 +39,13 @@ export class ClaudeProcessor {
       // Load prompt and execute Claude
       const prompt = this.loadPrompt(mention);
       const result = await this.executeClaudeCommand(prompt);
-      
+
       if (result.success) {
         await this.respondWithSuccess(mention);
       } else {
         await this.respondWithError(mention, result.error || 'Claude execution failed');
       }
-      
+
       logger.info('Mention processed successfully', {
         type: mention.type,
         id: mention.id,
@@ -63,7 +63,7 @@ export class ClaudeProcessor {
   private loadPrompt(mention: MentionEvent): string {
     const promptFile = `${mention.type}.txt`;
     const promptPath = resolve(resolvedPaths.prompts, promptFile);
-    
+
     try {
       const template = readFileSync(promptPath, 'utf-8');
       return template.replace('{{USER_REQUEST}}', mention.content);
@@ -73,20 +73,23 @@ export class ClaudeProcessor {
     }
   }
 
-  private async executeClaudeCommand(prompt: string): Promise<{ success: boolean; error?: string }> {
+  private async executeClaudeCommand(
+    prompt: string
+  ): Promise<{ success: boolean; error?: string }> {
     return new Promise((resolve) => {
-      logger.debug('Executing Claude CLI', { 
+      logger.debug('Executing Claude CLI', {
         cwd: resolvedPaths.targetProject,
-        claudeCliPath: config.claude.cliPath
+        claudeCliPath: config.claude.cliPath,
       });
-      
+
       const claudeArgs = [
-        '--output-format', 'stream-json',
+        '--output-format',
+        'stream-json',
         '--print',
         '--dangerously-skip-permissions',
-        '--verbose'
+        '--verbose',
       ];
-      
+
       const childProcess = spawn(config.claude.cliPath, claudeArgs, {
         stdio: ['pipe', 'pipe', 'pipe'],
         cwd: resolvedPaths.targetProject,
@@ -117,12 +120,12 @@ export class ClaudeProcessor {
           resolve({ success: true });
         } else {
           logger.error('Claude CLI failed', { code, stderr });
-          
+
           // Handle permission errors
           if (stderr.includes('permission')) {
-            resolve({ 
-              success: false, 
-              error: 'Permission error. Please run: claude --dangerously-skip-permissions' 
+            resolve({
+              success: false,
+              error: 'Permission error. Please run: claude --dangerously-skip-permissions',
             });
           } else {
             resolve({ success: false, error: stderr || `Exit code: ${code}` });
@@ -132,11 +135,11 @@ export class ClaudeProcessor {
 
       childProcess.on('error', (error) => {
         logger.error('Failed to spawn Claude CLI', { error });
-        
+
         if (error.message.includes('ENOENT')) {
-          resolve({ 
-            success: false, 
-            error: `Claude CLI not found at: ${config.claude.cliPath}` 
+          resolve({
+            success: false,
+            error: `Claude CLI not found at: ${config.claude.cliPath}`,
           });
         } else {
           resolve({ success: false, error: error.message });
@@ -169,7 +172,7 @@ export class ClaudeProcessor {
 
   private async addComment(mention: MentionEvent, message: string): Promise<void> {
     const targetNumber = mention.parentId || mention.id;
-    
+
     try {
       if (mention.type.includes('pr')) {
         await this.githubClient.addPullRequestComment(targetNumber, message);

@@ -1,9 +1,9 @@
-import { open, Database } from 'sqlite';
+import { createHash } from 'node:crypto';
+import { type Database, open } from 'sqlite';
 import sqlite3 from 'sqlite3';
-import { createHash } from 'crypto';
-import { TrackedItem, MentionHistory, ProcessingStats } from './types';
-import { logger } from './logger';
 import { config } from './config';
+import { logger } from './logger';
+import type { MentionHistory, ProcessingStats, TrackedItem } from './types';
 
 export class MentionTracker {
   private db!: Database<sqlite3.Database, sqlite3.Statement>;
@@ -16,9 +16,14 @@ export class MentionTracker {
       });
 
       await this.createTables();
-      logger.info('Database initialized successfully', { path: config.database.path });
+      logger.info('Database initialized successfully', {
+        path: config.database.path,
+      });
     } catch (error) {
-      logger.error('Failed to initialize database', { error, path: config.database.path });
+      logger.error('Failed to initialize database', {
+        error,
+        path: config.database.path,
+      });
       throw error;
     }
   }
@@ -72,7 +77,7 @@ export class MentionTracker {
       CREATE INDEX IF NOT EXISTS idx_tracked_items_type_id 
       ON tracked_items(item_type, item_id);
     `);
-    
+
     await this.db.exec(`
       CREATE INDEX IF NOT EXISTS idx_mention_history_detected 
       ON mention_history(detected_at);
@@ -84,9 +89,9 @@ export class MentionTracker {
   }
 
   async isContentChanged(
-    itemType: string, 
-    itemId: number, 
-    content: string, 
+    itemType: string,
+    itemId: number,
+    content: string,
     parentId?: number
   ): Promise<boolean> {
     const contentHash = this.calculateContentHash(content);
@@ -118,7 +123,11 @@ export class MentionTracker {
 
       return false;
     } catch (error) {
-      logger.error('Error checking content change', { error, itemType, itemId });
+      logger.error('Error checking content change', {
+        error,
+        itemType,
+        itemId,
+      });
       throw error;
     }
   }
@@ -131,12 +140,15 @@ export class MentionTracker {
     parentId?: number
   ): Promise<void> {
     const now = new Date().toISOString();
-    
-    await this.db.run(`
+
+    await this.db.run(
+      `
       INSERT INTO tracked_items 
       (item_type, item_id, parent_id, content_hash, has_mention, last_checked, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [itemType, itemId, parentId, contentHash, hasMention, now, now, now]);
+    `,
+      [itemType, itemId, parentId, contentHash, hasMention, now, now, now]
+    );
   }
 
   private async updateItem(
@@ -146,12 +158,15 @@ export class MentionTracker {
     hasMention: boolean
   ): Promise<void> {
     const now = new Date().toISOString();
-    
-    await this.db.run(`
+
+    await this.db.run(
+      `
       UPDATE tracked_items 
       SET content_hash = ?, has_mention = ?, last_checked = ?, updated_at = ?
       WHERE item_type = ? AND item_id = ?
-    `, [contentHash, hasMention, now, now, itemType, itemId]);
+    `,
+      [contentHash, hasMention, now, now, itemType, itemId]
+    );
   }
 
   async recordMention(
@@ -162,15 +177,23 @@ export class MentionTracker {
     parentId?: number
   ): Promise<void> {
     try {
-      await this.db.run(`
+      await this.db.run(
+        `
         INSERT INTO mention_history 
         (item_type, item_id, parent_id, user_login, mention_content, detected_at)
         VALUES (?, ?, ?, ?, ?, ?)
-      `, [itemType, itemId, parentId, userLogin, mentionContent, new Date().toISOString()]);
-      
+      `,
+        [itemType, itemId, parentId, userLogin, mentionContent, new Date().toISOString()]
+      );
+
       logger.info('Mention recorded', { itemType, itemId, userLogin });
     } catch (error) {
-      logger.error('Error recording mention', { error, itemType, itemId, userLogin });
+      logger.error('Error recording mention', {
+        error,
+        itemType,
+        itemId,
+        userLogin,
+      });
       throw error;
     }
   }
@@ -188,10 +211,11 @@ export class MentionTracker {
     );
   }
 
-  async updateDailyStats(newMentions: number, apiCalls: number, tokensUsed: number = 0): Promise<void> {
+  async updateDailyStats(newMentions: number, apiCalls: number, tokensUsed = 0): Promise<void> {
     const today = new Date().toISOString().split('T')[0];
-    
-    await this.db.run(`
+
+    await this.db.run(
+      `
       INSERT OR REPLACE INTO processing_stats 
       (date, total_checks, new_mentions, processed_mentions, api_calls, tokens_used)
       VALUES (
@@ -202,15 +226,16 @@ export class MentionTracker {
         COALESCE((SELECT api_calls FROM processing_stats WHERE date = ?), 0) + ?,
         COALESCE((SELECT tokens_used FROM processing_stats WHERE date = ?), 0) + ?
       )
-    `, [today, today, today, newMentions, today, today, apiCalls, today, tokensUsed]);
+    `,
+      [today, today, today, newMentions, today, today, apiCalls, today, tokensUsed]
+    );
   }
 
   async getTodayStats(): Promise<ProcessingStats | null> {
     const today = new Date().toISOString().split('T')[0];
-    return await this.db.get<ProcessingStats>(
-      'SELECT * FROM processing_stats WHERE date = ?',
-      [today]
-    );
+    return await this.db.get<ProcessingStats>('SELECT * FROM processing_stats WHERE date = ?', [
+      today,
+    ]);
   }
 
   async close(): Promise<void> {
