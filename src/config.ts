@@ -35,6 +35,7 @@ export const config: Config = {
   mention: {
     patterns: (process.env.MENTION_PATTERNS || '@claude,@claude-code').split(','),
     enableAutoResponse: process.env.ENABLE_AUTO_RESPONSE === 'true',
+    onlyOpenIssues: process.env.ONLY_OPEN_ISSUES !== 'false', // デフォルトでtrue
   },
   processing: {
     maxConcurrentExecutions: Number.parseInt(process.env.MAX_CONCURRENT_EXECUTIONS || '1', 10),

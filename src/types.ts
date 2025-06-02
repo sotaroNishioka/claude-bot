@@ -122,6 +122,7 @@ export interface Config {
   mention: {
     patterns: string[];
     enableAutoResponse: boolean;
+    onlyOpenIssues: boolean; // openなIssues/PRのみを対象にするか
   };
   processing: {
     maxConcurrentExecutions: number;

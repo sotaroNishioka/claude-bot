@@ -22,7 +22,7 @@ export class GitHubClient {
         owner: this.owner,
         repo: this.repo,
         since,
-        state: 'all',
+        state: config.mention.onlyOpenIssues ? 'open' : 'all',
         per_page: 100,
       });
 
@@ -42,7 +42,7 @@ export class GitHubClient {
       const { data } = await this.octokit.rest.pulls.list({
         owner: this.owner,
         repo: this.repo,
-        state: 'all',
+        state: config.mention.onlyOpenIssues ? 'open' : 'all',
         per_page: 100,
       });
 
