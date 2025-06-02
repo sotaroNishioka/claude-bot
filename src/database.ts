@@ -233,9 +233,10 @@ export class MentionTracker {
 
   async getTodayStats(): Promise<ProcessingStats | null> {
     const today = new Date().toISOString().split('T')[0];
-    const result = await this.db.get<ProcessingStats | undefined>('SELECT * FROM processing_stats WHERE date = ?', [
-      today,
-    ]);
+    const result = await this.db.get<ProcessingStats | undefined>(
+      'SELECT * FROM processing_stats WHERE date = ?',
+      [today]
+    );
     return result || null;
   }
 
