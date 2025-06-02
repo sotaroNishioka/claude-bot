@@ -1,11 +1,11 @@
-import { spawn } from 'child_process';
-import { readFileSync, existsSync } from 'fs';
-import { resolve } from 'path';
-import { MentionEvent } from './types';
-import { GitHubClient } from './github-client';
-import { MentionTracker } from './database';
-import { logger } from './logger';
+import { spawn } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { config, resolvedPaths } from './config';
+import { MentionTracker } from './database';
+import { GitHubClient } from './github-client';
+import { logger } from './logger';
+import { MentionEvent } from './types';
 
 export class ClaudeProcessor {
   private githubClient: GitHubClient;
@@ -67,7 +67,7 @@ export class ClaudeProcessor {
     try {
       const template = readFileSync(promptPath, 'utf-8');
       return template.replace('{{USER_REQUEST}}', mention.content);
-    } catch (error) {
+    } catch (_error) {
       logger.warn(`Prompt file not found: ${promptFile}, using direct content`);
       return mention.content;
     }
@@ -87,7 +87,7 @@ export class ClaudeProcessor {
         '--verbose'
       ];
       
-      const process = spawn(config.claude.cliPath, claudeArgs, {
+      const childProcess = spawn(config.claude.cliPath, claudeArgs, {
         stdio: ['pipe', 'pipe', 'pipe'],
         cwd: resolvedPaths.targetProject,
         env: {
@@ -96,22 +96,22 @@ export class ClaudeProcessor {
         },
       });
 
-      let stdout = '';
+      let _stdout = '';
       let stderr = '';
 
       // Send prompt to stdin
-      process.stdin.write(prompt);
-      process.stdin.end();
+      childProcess.stdin.write(prompt);
+      childProcess.stdin.end();
 
-      process.stdout.on('data', (data) => {
-        stdout += data.toString();
+      childProcess.stdout.on('data', (data) => {
+        _stdout += data.toString();
       });
 
-      process.stderr.on('data', (data) => {
+      childProcess.stderr.on('data', (data) => {
         stderr += data.toString();
       });
 
-      process.on('close', (code) => {
+      childProcess.on('close', (code) => {
         if (code === 0) {
           logger.debug('Claude CLI succeeded');
           resolve({ success: true });
@@ -130,7 +130,7 @@ export class ClaudeProcessor {
         }
       });
 
-      process.on('error', (error) => {
+      childProcess.on('error', (error) => {
         logger.error('Failed to spawn Claude CLI', { error });
         
         if (error.message.includes('ENOENT')) {
@@ -145,19 +145,25 @@ export class ClaudeProcessor {
 
       // 5 minute timeout
       setTimeout(() => {
-        process.kill('SIGTERM');
+        childProcess.kill('SIGTERM');
         resolve({ success: false, error: 'Command timeout (5 minutes)' });
       }, 300000);
     });
   }
 
   private async respondWithSuccess(mention: MentionEvent): Promise<void> {
-    const message = `✅ @${mention.user} Claude Code execution completed.\n\n**Target Project:** \`${resolvedPaths.targetProject}\``;
+    const message = `✅ @${mention.user} Claude Code execution completed.
+
+**Target Project:** \`${resolvedPaths.targetProject}\``;
     await this.addComment(mention, message);
   }
 
   private async respondWithError(mention: MentionEvent, error: string): Promise<void> {
-    const message = `❌ @${mention.user} ${error}\n\n**Debug Info:**\n- Target Project: \`${resolvedPaths.targetProject}\`\n- Claude CLI: \`${config.claude.cliPath}\``;
+    const message = `❌ @${mention.user} ${error}
+
+**Debug Info:**
+- Target Project: \`${resolvedPaths.targetProject}\`
+- Claude CLI: \`${config.claude.cliPath}\``;
     await this.addComment(mention, message);
   }
 
