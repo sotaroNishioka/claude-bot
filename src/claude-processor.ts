@@ -3,7 +3,9 @@ import { MentionEvent, ClaudeCommand } from './types';
 import { GitHubClient } from './github-client';
 import { MentionTracker } from './database';
 import { logger } from './logger';
-import { config } from './config';
+import { config, resolvedPaths } from './config';
+import { existsSync } from 'fs';
+import { resolve } from 'path';
 
 export class ClaudeProcessor {
   private githubClient: GitHubClient;
@@ -26,6 +28,12 @@ export class ClaudeProcessor {
       // Parse the command from mention content
       const command = this.parseCommand(mention);
       
+      // Validate target project exists
+      if (!this.validateTargetProject()) {
+        await this.respondWithProjectError(mention);
+        return;
+      }
+
       // Check token budget
       const estimatedTokens = this.estimateTokenUsage(command.action);
       if (!(await this.canUseTokens(estimatedTokens))) {
@@ -53,6 +61,24 @@ export class ClaudeProcessor {
       
       await this.respondWithErrorMessage(mention, error);
     }
+  }
+
+  private validateTargetProject(): boolean {
+    const targetPath = resolvedPaths.targetProject;
+    
+    if (!existsSync(targetPath)) {
+      logger.error('Target project path does not exist', { targetPath });
+      return false;
+    }
+
+    // Check if it's a git repository
+    const gitPath = resolve(targetPath, '.git');
+    if (!existsSync(gitPath)) {
+      logger.warn('Target project is not a git repository', { targetPath });
+      // Continue anyway, Claude Code might still work
+    }
+
+    return true;
   }
 
   private parseCommand(mention: MentionEvent): ClaudeCommand {
@@ -128,10 +154,11 @@ export class ClaudeProcessor {
       target: command.target,
       targetNumber: command.targetNumber,
       parameters: command.parameters,
+      workingDirectory: resolvedPaths.targetProject,
     });
 
     const claudeCommand = [
-      'claude',
+      config.claude.cliPath,
       'code',
       'implement',
       `--${command.target}`,
@@ -147,7 +174,7 @@ export class ClaudeProcessor {
     const result = await this.runCommand(claudeCommand);
     
     if (result.success) {
-      const responseMessage = `✅ @${command.user} Implementation completed by Claude Code. Please check the created PR.`;
+      const responseMessage = `✅ @${command.user} Implementation completed by Claude Code. Please check the created PR.\n\n**Working Directory:** \`${resolvedPaths.targetProject}\`\n**Command:** \`${claudeCommand.join(' ')}\``;
       await this.respondToMention(command, responseMessage);
     } else {
       throw new Error(`Implementation failed: ${result.error}`);
@@ -159,10 +186,11 @@ export class ClaudeProcessor {
       target: command.target,
       targetNumber: command.targetNumber,
       parameters: command.parameters,
+      workingDirectory: resolvedPaths.targetProject,
     });
 
     const claudeCommand = [
-      'claude',
+      config.claude.cliPath,
       'code',
       'review',
       `--${command.target}`,
@@ -178,7 +206,7 @@ export class ClaudeProcessor {
     const result = await this.runCommand(claudeCommand);
     
     if (result.success) {
-      const responseMessage = `✅ @${command.user} Code review completed by Claude Code. Check the comments for detailed feedback.`;
+      const responseMessage = `✅ @${command.user} Code review completed by Claude Code. Check the comments for detailed feedback.\n\n**Working Directory:** \`${resolvedPaths.targetProject}\``;
       await this.respondToMention(command, responseMessage);
     } else {
       throw new Error(`Review failed: ${result.error}`);
@@ -190,10 +218,11 @@ export class ClaudeProcessor {
       target: command.target,
       targetNumber: command.targetNumber,
       parameters: command.parameters,
+      workingDirectory: resolvedPaths.targetProject,
     });
 
     const claudeCommand = [
-      'claude',
+      config.claude.cliPath,
       'code',
       'analyze',
       `--${command.target}`,
@@ -207,7 +236,7 @@ export class ClaudeProcessor {
     const result = await this.runCommand(claudeCommand);
     
     if (result.success) {
-      const responseMessage = `✅ @${command.user} Analysis completed by Claude Code. Detailed insights have been generated.`;
+      const responseMessage = `✅ @${command.user} Analysis completed by Claude Code. Detailed insights have been generated.\n\n**Working Directory:** \`${resolvedPaths.targetProject}\``;
       await this.respondToMention(command, responseMessage);
     } else {
       throw new Error(`Analysis failed: ${result.error}`);
@@ -219,10 +248,11 @@ export class ClaudeProcessor {
       target: command.target,
       targetNumber: command.targetNumber,
       parameters: command.parameters,
+      workingDirectory: resolvedPaths.targetProject,
     });
 
     const claudeCommand = [
-      'claude',
+      config.claude.cliPath,
       'code',
       'improve',
       `--${command.target}`,
@@ -236,7 +266,7 @@ export class ClaudeProcessor {
     const result = await this.runCommand(claudeCommand);
     
     if (result.success) {
-      const responseMessage = `✅ @${command.user} Code improvement suggestions generated by Claude Code.`;
+      const responseMessage = `✅ @${command.user} Code improvement suggestions generated by Claude Code.\n\n**Working Directory:** \`${resolvedPaths.targetProject}\``;
       await this.respondToMention(command, responseMessage);
     } else {
       throw new Error(`Improvement failed: ${result.error}`);
@@ -248,10 +278,11 @@ export class ClaudeProcessor {
       target: command.target,
       targetNumber: command.targetNumber,
       parameters: command.parameters,
+      workingDirectory: resolvedPaths.targetProject,
     });
 
     const claudeCommand = [
-      'claude',
+      config.claude.cliPath,
       'code',
       'test',
       `--${command.target}`,
@@ -267,7 +298,7 @@ export class ClaudeProcessor {
     const result = await this.runCommand(claudeCommand);
     
     if (result.success) {
-      const responseMessage = `✅ @${command.user} Test generation completed by Claude Code.`;
+      const responseMessage = `✅ @${command.user} Test generation completed by Claude Code.\n\n**Working Directory:** \`${resolvedPaths.targetProject}\``;
       await this.respondToMention(command, responseMessage);
     } else {
       throw new Error(`Test generation failed: ${result.error}`);
@@ -289,6 +320,10 @@ export class ClaudeProcessor {
 - \`@claude review performance and memory usage\`
 - \`@claude test unit tests for edge cases\`
 
+**Project Information:**
+- **Target Project:** \`${resolvedPaths.targetProject}\`
+- **Claude CLI:** \`${config.claude.cliPath}\`
+
 ---
 *Powered by Claude Code - AI-driven development automation*`;
 
@@ -302,10 +337,20 @@ export class ClaudeProcessor {
 
   private async runCommand(command: string[]): Promise<{ success: boolean; error?: string }> {
     return new Promise((resolve) => {
-      logger.debug('Running Claude Code command', { command });
+      logger.debug('Running Claude Code command', { 
+        command, 
+        cwd: resolvedPaths.targetProject,
+        claudeCliPath: config.claude.cliPath 
+      });
       
       const process = spawn(command[0], command.slice(1), {
         stdio: ['pipe', 'pipe', 'pipe'],
+        cwd: resolvedPaths.targetProject, // 重要: target-project で実行
+        env: {
+          ...process.env,
+          // Claude API key を環境変数として渡す
+          CLAUDE_API_KEY: config.claude.apiKey,
+        },
       });
 
       let stdout = '';
@@ -330,14 +375,25 @@ export class ClaudeProcessor {
       });
 
       process.on('error', (error) => {
-        logger.error('Failed to spawn Claude Code process', { error });
-        resolve({ success: false, error: error.message });
+        logger.error('Failed to spawn Claude Code process', { 
+          error, 
+          command: command[0],
+          cwd: resolvedPaths.targetProject 
+        });
+        
+        // More specific error messages
+        if (error.message.includes('ENOENT')) {
+          const errorMsg = `Claude CLI not found at: ${command[0]}. Please check CLAUDE_CLI_PATH setting.`;
+          resolve({ success: false, error: errorMsg });
+        } else {
+          resolve({ success: false, error: error.message });
+        }
       });
 
       // Set timeout for long-running commands
       setTimeout(() => {
         process.kill('SIGTERM');
-        resolve({ success: false, error: 'Command timeout' });
+        resolve({ success: false, error: 'Command timeout (5 minutes)' });
       }, 300000); // 5 minutes timeout
     });
   }
@@ -387,7 +443,7 @@ export class ClaudeProcessor {
   }
 
   private async respondWithErrorMessage(mention: MentionEvent, error: any): Promise<void> {
-    const message = `❌ @${mention.user} An error occurred while processing your request:\n\n\`\`\`\n${error.message || error}\n\`\`\`\n\nPlease try again or contact support if the problem persists.`;
+    const message = `❌ @${mention.user} An error occurred while processing your request:\n\n\`\`\`\n${error.message || error}\n\`\`\`\n\nPlease try again or contact support if the problem persists.\n\n**Debug Info:**\n- Target Project: \`${resolvedPaths.targetProject}\`\n- Claude CLI: \`${config.claude.cliPath}\``;
     
     const targetNumber = mention.parentId || mention.id;
     if (mention.type.includes('pr')) {
@@ -398,7 +454,18 @@ export class ClaudeProcessor {
   }
 
   private async respondWithClaudeUnavailableMessage(mention: MentionEvent): Promise<void> {
-    const message = `⚠️ @${mention.user} Claude Code is currently unavailable. Please ensure CLAUDE_API_KEY is configured properly.`;
+    const message = `⚠️ @${mention.user} Claude Code is currently unavailable. Please ensure CLAUDE_API_KEY is configured properly.\n\n**Configuration:**\n- Claude CLI: \`${config.claude.cliPath}\`\n- Target Project: \`${resolvedPaths.targetProject}\``;
+    
+    const targetNumber = mention.parentId || mention.id;
+    if (mention.type.includes('pr')) {
+      await this.githubClient.addPullRequestComment(targetNumber, message);
+    } else {
+      await this.githubClient.addIssueComment(targetNumber, message);
+    }
+  }
+
+  private async respondWithProjectError(mention: MentionEvent): Promise<void> {
+    const message = `❌ @${mention.user} Target project directory not found: \`${resolvedPaths.targetProject}\`\n\nPlease check your TARGET_PROJECT_PATH configuration.`;
     
     const targetNumber = mention.parentId || mention.id;
     if (mention.type.includes('pr')) {
