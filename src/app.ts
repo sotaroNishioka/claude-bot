@@ -152,14 +152,42 @@ export class ClaudeBotApp {
       }
 
       const since = await this.detector.getLastCheckTime();
-      const mentions = await this.detector.detectNewMentions(since);
+      const newMentions = await this.detector.detectNewMentions(since);
+      
+      // 新規検出のメンションに加えて、既存の未処理メンションも取得
+      const unprocessedMentions = await this.tracker.getUnprocessedMentions();
+      
+      // 新規メンションと未処理メンションを結合（重複を除去）
+      const allMentions = [...newMentions];
+      for (const unprocessed of unprocessedMentions) {
+        // 新規メンションと重複していない未処理メンションを追加
+        const isDuplicate = newMentions.some(
+          m => m.type === unprocessed.itemType && m.id === unprocessed.itemId
+        );
+        if (!isDuplicate) {
+          // 未処理メンションをMentionEvent形式に変換
+          const mentionEvent = {
+            type: unprocessed.itemType as 'issue' | 'issue_comment' | 'pr' | 'pr_comment',
+            id: unprocessed.itemId,
+            parentId: unprocessed.parentId,
+            content: unprocessed.mentionContent,
+            user: unprocessed.userLogin,
+            detectedAt: unprocessed.detectedAt,
+            processed: false,
+            url: this.generateUrl(unprocessed.itemType, unprocessed.itemId, unprocessed.parentId),
+            title: `${unprocessed.itemType} #${unprocessed.itemId}`,
+            mentionHistoryId: unprocessed.id,
+          };
+          allMentions.push(mentionEvent);
+        }
+      }
 
-      if (mentions.length === 0) {
-        logger.debug('新しいメンションは見つかりませんでした');
+      if (allMentions.length === 0) {
+        logger.debug('処理すべきメンションはありません');
         return;
       }
 
-      logger.info(`${mentions.length}件の新しいメンションを発見、順次処理します`);
+      logger.info(`${allMentions.length}件のメンションを発見（新規: ${newMentions.length}件、未処理: ${allMentions.length - newMentions.length}件）、順次処理します`);
 
       // Claude処理フラグをセットして同時実行を防ぐ
       this.isProcessingMentions = true;
@@ -167,7 +195,7 @@ export class ClaudeBotApp {
 
       try {
         // レート制限を避けるためメンションを順次処理
-        for (const mention of mentions) {
+        for (const mention of allMentions) {
           try {
             await this.processor.processMention(mention);
             processedCount++;
@@ -191,15 +219,18 @@ export class ClaudeBotApp {
         this.isProcessingMentions = false;
       }
 
-      logger.info(`メンション処理完了: ${processedCount}/${mentions.length}件処理しました`, {
+      logger.info(`メンション処理完了: ${processedCount}/${allMentions.length}件処理しました`, {
         processedCount,
-        totalMentions: mentions.length,
+        totalMentions: allMentions.length,
+        newMentions: newMentions.length,
+        unprocessedMentions: allMentions.length - newMentions.length,
       });
 
       await this.detector.updateLastCheckTime();
 
       logger.info('検出サイクルが完了しました', {
-        totalMentions: mentions.length,
+        totalMentions: allMentions.length,
+        newMentions: newMentions.length,
         since,
       });
     } catch (error) {
@@ -298,6 +329,22 @@ export class ClaudeBotApp {
     } finally {
       await this.tracker.close();
     }
+  }
+
+  private generateUrl(itemType: string, itemId: number, parentId?: number): string {
+    const baseUrl = `https://github.com/${config.github.owner}/${config.github.repo}`;
+    
+    if (itemType === 'issue') {
+      return `${baseUrl}/issues/${itemId}`;
+    } else if (itemType === 'pr') {
+      return `${baseUrl}/pull/${itemId}`;
+    } else if (itemType === 'issue_comment') {
+      return `${baseUrl}/issues/${parentId}#issuecomment-${itemId}`;
+    } else if (itemType === 'pr_comment') {
+      return `${baseUrl}/pull/${parentId}#issuecomment-${itemId}`;
+    }
+    
+    return baseUrl;
   }
 
   async getStatus() {

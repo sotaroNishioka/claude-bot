@@ -63,6 +63,10 @@ export class ClaudeProcessor {
 
         if (result.success) {
           await this.respondWithSuccess(mention);
+          // 処理成功時にのみ処理済みとしてマーク
+          if (mention.mentionHistoryId) {
+            await this.tracker.markMentionProcessed(mention.mentionHistoryId);
+          }
         } else {
           await this.respondWithError(mention, result.error || 'Claude Code実行に失敗しました');
         }

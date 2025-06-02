@@ -93,7 +93,7 @@ export class MentionTracker {
     itemId: number,
     content: string,
     parentId?: number
-  ): Promise<boolean> {
+  ): Promise<{ changed: boolean; mentionId?: number }> {
     const contentHash = this.calculateContentHash(content);
     const now = new Date();
 
@@ -112,13 +112,13 @@ export class MentionTracker {
           this.containsMention(content),
           parentId
         );
-        return true;
+        return { changed: true };
       }
 
       if (existing.contentHash !== contentHash) {
         // コンテンツが変更された
         await this.updateItem(itemType, itemId, contentHash, this.containsMention(content));
-        return true;
+        return { changed: true };
       }
 
       // 変更なし、last_checkedのみ更新
@@ -127,7 +127,7 @@ export class MentionTracker {
         [now.toISOString(), itemType, itemId]
       );
 
-      return false;
+      return { changed: false };
     } catch (error) {
       logger.error('Error checking content change', {
         error,
@@ -181,9 +181,9 @@ export class MentionTracker {
     userLogin: string,
     mentionContent: string,
     parentId?: number
-  ): Promise<void> {
+  ): Promise<number> {
     try {
-      await this.db.run(
+      const result = await this.db.run(
         `
         INSERT INTO mention_history 
         (item_type, item_id, parent_id, user_login, mention_content, detected_at)
@@ -192,7 +192,9 @@ export class MentionTracker {
         [itemType, itemId, parentId, userLogin, mentionContent, new Date().toISOString()]
       );
 
-      logger.info('Mention recorded', { itemType, itemId, userLogin });
+      const mentionId = result.lastID as number;
+      logger.info('Mention recorded', { itemType, itemId, userLogin, mentionId });
+      return mentionId;
     } catch (error) {
       logger.error('Error recording mention', {
         error,

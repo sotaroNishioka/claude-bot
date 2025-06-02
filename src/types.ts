@@ -56,6 +56,7 @@ export interface MentionEvent {
   processed: boolean;
   url?: string; // GitHub URL for context
   title?: string; // Issue/PR title for context
+  mentionHistoryId?: number; // 処理済みマーク用のメンション履歴ID
 }
 
 export interface TrackedItem {

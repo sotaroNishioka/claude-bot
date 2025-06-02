@@ -42,13 +42,21 @@ export class MentionDetector {
       // Issueをチェック
       const issues = await this.githubClient.getIssuesSince(sinceTime);
       for (const issue of issues) {
-        const hasChanged = await this.tracker.isContentChanged(
+        const changeResult = await this.tracker.isContentChanged(
           'issue',
           issue.number,
           issue.body || ''
         );
-        if (hasChanged && this.containsMention(issue.body || '')) {
+        if (changeResult.changed && this.containsMention(issue.body || '')) {
           const issueUrl = `https://github.com/${config.github.owner}/${config.github.repo}/issues/${issue.number}`;
+          
+          const mentionId = await this.tracker.recordMention(
+            'issue',
+            issue.number,
+            issue.user.login,
+            issue.body || ''
+          );
+          
           mentions.push({
             type: 'issue',
             id: issue.number,
@@ -58,14 +66,8 @@ export class MentionDetector {
             processed: false,
             url: issueUrl,
             title: issue.title,
+            mentionHistoryId: mentionId,
           });
-
-          await this.tracker.recordMention(
-            'issue',
-            issue.number,
-            issue.user.login,
-            issue.body || ''
-          );
         }
       }
 
@@ -73,15 +75,24 @@ export class MentionDetector {
       const issueComments = await this.githubClient.getIssueCommentsSince(sinceTime);
       for (const comment of issueComments) {
         const issueNumber = this.githubClient.extractIssueNumber(comment.issue_url);
-        const hasChanged = await this.tracker.isContentChanged(
+        const changeResult = await this.tracker.isContentChanged(
           'issue_comment',
           comment.id,
           comment.body,
           issueNumber
         );
-        if (hasChanged && this.containsMention(comment.body)) {
+        if (changeResult.changed && this.containsMention(comment.body)) {
           const issueUrl = `https://github.com/${config.github.owner}/${config.github.repo}/issues/${issueNumber}`;
           const commentUrl = `${issueUrl}#issuecomment-${comment.id}`;
+          
+          const mentionId = await this.tracker.recordMention(
+            'issue_comment',
+            comment.id,
+            comment.user.login,
+            comment.body,
+            issueNumber
+          );
+          
           mentions.push({
             type: 'issue_comment',
             id: comment.id,
@@ -92,24 +103,20 @@ export class MentionDetector {
             processed: false,
             url: commentUrl,
             title: `Issue #${issueNumber} Comment`,
+            mentionHistoryId: mentionId,
           });
-
-          await this.tracker.recordMention(
-            'issue_comment',
-            comment.id,
-            comment.user.login,
-            comment.body,
-            issueNumber
-          );
         }
       }
 
       // Pull Requestをチェック
       const prs = await this.githubClient.getPullRequestsSince(sinceTime);
       for (const pr of prs) {
-        const hasChanged = await this.tracker.isContentChanged('pr', pr.number, pr.body || '');
-        if (hasChanged && this.containsMention(pr.body || '')) {
+        const changeResult = await this.tracker.isContentChanged('pr', pr.number, pr.body || '');
+        if (changeResult.changed && this.containsMention(pr.body || '')) {
           const prUrl = `https://github.com/${config.github.owner}/${config.github.repo}/pull/${pr.number}`;
+          
+          const mentionId = await this.tracker.recordMention('pr', pr.number, pr.user.login, pr.body || '');
+          
           mentions.push({
             type: 'pr',
             id: pr.number,
@@ -119,9 +126,8 @@ export class MentionDetector {
             processed: false,
             url: prUrl,
             title: pr.title,
+            mentionHistoryId: mentionId,
           });
-
-          await this.tracker.recordMention('pr', pr.number, pr.user.login, pr.body || '');
         }
       }
 
@@ -130,15 +136,24 @@ export class MentionDetector {
       for (const comment of prComments) {
         // PRコメントの場合、issue_urlは既に正しいリソースを指している
         const prNumber = this.githubClient.extractIssueNumber(comment.issue_url);
-        const hasChanged = await this.tracker.isContentChanged(
+        const changeResult = await this.tracker.isContentChanged(
           'pr_comment',
           comment.id,
           comment.body,
           prNumber
         );
-        if (hasChanged && this.containsMention(comment.body)) {
+        if (changeResult.changed && this.containsMention(comment.body)) {
           const prUrl = `https://github.com/${config.github.owner}/${config.github.repo}/pull/${prNumber}`;
           const commentUrl = `${prUrl}#issuecomment-${comment.id}`;
+          
+          const mentionId = await this.tracker.recordMention(
+            'pr_comment',
+            comment.id,
+            comment.user.login,
+            comment.body,
+            prNumber
+          );
+          
           mentions.push({
             type: 'pr_comment',
             id: comment.id,
@@ -149,15 +164,8 @@ export class MentionDetector {
             processed: false,
             url: commentUrl,
             title: `Pull Request #${prNumber} Comment`,
+            mentionHistoryId: mentionId,
           });
-
-          await this.tracker.recordMention(
-            'pr_comment',
-            comment.id,
-            comment.user.login,
-            comment.body,
-            prNumber
-          );
         }
       }
 
