@@ -310,7 +310,6 @@ export class ClaudeBotApp {
       configuration: {
         detectionInterval: config.cron.detectionInterval,
         backupInterval: config.cron.backupInterval,
-        dailyTokenLimit: config.claude.dailyTokenLimit,
         mentionPatterns: config.mention.patterns,
         maxConcurrentExecutions: config.processing.maxConcurrentExecutions,
       },

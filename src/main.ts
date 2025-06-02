@@ -115,7 +115,6 @@ program
       console.log('Configuration loaded:');
       console.log(`- GitHub: ${config.github.owner}/${config.github.repo}`);
       console.log(`- Database: ${config.database.path}`);
-      console.log(`- Token limit: ${config.claude.dailyTokenLimit}`);
       console.log(`- Mention patterns: ${config.mention.patterns.join(', ')}`);
 
       // GitHub接続をテスト

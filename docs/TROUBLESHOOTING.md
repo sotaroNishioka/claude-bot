@@ -319,44 +319,6 @@ echo "*.log" >> ../target-project/.gitignore
 MAX_CONCURRENT_EXECUTIONS=1
 ```
 
-### 4. トークン制限エラー
-
-#### 症状
-```
-⚠️ Daily token limit reached: 45000
-❌ Token usage exceeded daily limit
-```
-
-#### 解決方法
-
-**4.1 トークン使用量の確認**
-```bash
-# 今日のトークン使用量確認
-npm run dev -- status | grep "tokensUsed"
-
-# データベースで詳細確認
-sqlite3 mention_tracker.db "
-SELECT date, tokens_used, api_calls 
-FROM processing_stats 
-WHERE date >= date('now', '-7 days')
-ORDER BY date DESC;
-"
-```
-
-**4.2 制限値の調整**
-```env
-# Claude MAX の実際の制限に応じて調整
-DAILY_TOKEN_LIMIT=60000  # より高い値に設定
-
-# 保守的な設定
-DAILY_TOKEN_LIMIT=30000  # より低い値に設定
-```
-
-**4.3 効率的なプロンプト設計**
-```bash
-# prompts/ ディレクトリのプロンプトを最適化
-# より具体的で簡潔なプロンプトに変更
-```
 
 ## 🗄️ データベース関連の問題
 

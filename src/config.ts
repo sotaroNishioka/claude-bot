@@ -13,7 +13,6 @@ export const config: Config = {
   },
   claude: {
     cliPath: process.env.CLAUDE_CLI_PATH || 'claude',
-    dailyTokenLimit: Number.parseInt(process.env.DAILY_TOKEN_LIMIT || '45000', 10),
   },
   project: {
     targetPath: process.env.TARGET_PROJECT_PATH || '../target-project',
@@ -82,11 +81,6 @@ if (config.claude.cliPath !== 'claude') {
   }
 }
 
-// 日次トークン制限の検証
-if (config.claude.dailyTokenLimit <= 0) {
-  console.warn('DAILY_TOKEN_LIMIT should be a positive number. Using default: 45000');
-  config.claude.dailyTokenLimit = 45000;
-}
 
 // 同時実行数の検証
 if (
@@ -110,6 +104,5 @@ console.log('Configuration loaded:', {
   claudeCli: config.claude.cliPath,
   promptsDir: resolvedPaths.prompts,
   environment: config.system.environment,
-  dailyTokenLimit: config.claude.dailyTokenLimit,
   maxConcurrentExecutions: config.processing.maxConcurrentExecutions,
 });

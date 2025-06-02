@@ -217,7 +217,7 @@ export class MentionTracker {
     );
   }
 
-  async updateDailyStats(newMentions: number, apiCalls: number, tokensUsed = 0): Promise<void> {
+  async updateDailyStats(newMentions: number, apiCalls: number): Promise<void> {
     const today = new Date().toISOString().split('T')[0];
 
     await this.db.run(
@@ -230,10 +230,10 @@ export class MentionTracker {
         COALESCE((SELECT new_mentions FROM processing_stats WHERE date = ?), 0) + ?,
         COALESCE((SELECT processed_mentions FROM processing_stats WHERE date = ?), 0),
         COALESCE((SELECT api_calls FROM processing_stats WHERE date = ?), 0) + ?,
-        COALESCE((SELECT tokens_used FROM processing_stats WHERE date = ?), 0) + ?
+        0
       )
     `,
-      [today, today, today, newMentions, today, today, apiCalls, today, tokensUsed]
+      [today, today, today, newMentions, today, today, apiCalls]
     );
   }
 

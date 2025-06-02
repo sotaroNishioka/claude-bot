@@ -192,7 +192,6 @@ GITHUB_REPO=your_repository_name
 # Claude Code 設定（必須）
 # ===========================================
 CLAUDE_CLI_PATH=/usr/local/bin/claude
-DAILY_TOKEN_LIMIT=45000
 
 # ===========================================
 # プロジェクトパス設定
@@ -840,9 +839,6 @@ GITHUB_API_RETRY_DELAY=5000
 #### Claude Code の最適化
 
 ```env
-# トークン制限の調整
-DAILY_TOKEN_LIMIT=30000  # 保守的な設定
-
 # タイムアウト設定
 CLAUDE_CODE_TIMEOUT=300000  # 5分
 ```
