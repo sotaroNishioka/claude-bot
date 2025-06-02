@@ -104,6 +104,13 @@ export interface Config {
     targetPath: string;
     claudeBotPath: string;
   };
+  prompts: {
+    dir: string;
+    defaultIssuePrompt: string;
+    defaultIssueCommentPrompt: string;
+    defaultPrPrompt: string;
+    defaultPrCommentPrompt: string;
+  };
   database: {
     path: string;
   };
@@ -131,4 +138,10 @@ export interface ClaudeCommand {
   targetNumber: number;
   parameters: string;
   user: string;
+  promptFile?: string;
+}
+
+export interface PromptTemplate {
+  content: string;
+  variables: string[];
 }

@@ -20,6 +20,13 @@ export const config: Config = {
     targetPath: process.env.TARGET_PROJECT_PATH || '../target-project',
     claudeBotPath: process.env.CLAUDE_BOT_PATH || process.cwd(),
   },
+  prompts: {
+    dir: process.env.PROMPTS_DIR || './prompts',
+    defaultIssuePrompt: process.env.DEFAULT_ISSUE_PROMPT || 'issue_handler.txt',
+    defaultIssueCommentPrompt: process.env.DEFAULT_ISSUE_COMMENT_PROMPT || 'issue_comment_handler.txt',
+    defaultPrPrompt: process.env.DEFAULT_PR_PROMPT || 'pr_handler.txt',
+    defaultPrCommentPrompt: process.env.DEFAULT_PR_COMMENT_PROMPT || 'pr_comment_handler.txt',
+  },
   database: {
     path: process.env.DATABASE_PATH || './mention_tracker.db',
   },
@@ -61,6 +68,18 @@ if (!existsSync(resolvedTargetPath)) {
   console.warn('Please ensure TARGET_PROJECT_PATH points to a valid directory');
 }
 
+// Prompts directory validation
+const resolvedPromptsPath = resolve(config.prompts.dir);
+if (!existsSync(resolvedPromptsPath)) {
+  console.warn(`Prompts directory does not exist: ${resolvedPromptsPath}`);
+  console.warn('Creating prompts directory...');
+  try {
+    require('fs').mkdirSync(resolvedPromptsPath, { recursive: true });
+  } catch (error) {
+    console.error('Failed to create prompts directory:', error);
+  }
+}
+
 // Claude CLI validation
 if (config.claude.cliPath !== 'claude') {
   if (!existsSync(config.claude.cliPath)) {
@@ -73,11 +92,13 @@ if (config.claude.cliPath !== 'claude') {
 export const resolvedPaths = {
   targetProject: resolve(config.project.targetPath),
   claudeBot: resolve(config.project.claudeBotPath),
+  prompts: resolve(config.prompts.dir),
 };
 
 console.log('Configuration loaded:', {
   github: `${config.github.owner}/${config.github.repo}`,
   targetProject: resolvedPaths.targetProject,
   claudeCli: config.claude.cliPath,
+  promptsDir: resolvedPaths.prompts,
   environment: config.system.environment,
 });
