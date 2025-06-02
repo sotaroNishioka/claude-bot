@@ -45,13 +45,15 @@ export const config: Config = {
   },
 };
 
-// バリデーション
-if (!config.github.token) {
-  throw new Error('GITHUB_TOKEN is required');
-}
+// バリデーション関数（必要時に呼び出し）
+export function validateConfig(): void {
+  if (!config.github.token) {
+    throw new Error('GITHUB_TOKEN is required');
+  }
 
-if (!config.github.owner || !config.github.repo) {
-  throw new Error('GITHUB_OWNER and GITHUB_REPO are required');
+  if (!config.github.owner || !config.github.repo) {
+    throw new Error('GITHUB_OWNER and GITHUB_REPO are required');
+  }
 }
 
 // パスの検証

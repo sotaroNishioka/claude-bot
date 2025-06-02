@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import { ClaudeProcessor } from './claude-processor';
-import { config } from './config';
+import { config, validateConfig } from './config';
 import { MentionTracker } from './database';
 import { GitHubClient } from './github-client';
 import { logger } from './logger';
@@ -27,6 +27,9 @@ export class ClaudeBotApp {
   async initialize(): Promise<void> {
     try {
       logger.info('Claude Botを初期化中...');
+
+      // 設定をバリデーション
+      validateConfig();
 
       // データベースを初期化
       await this.tracker.init();

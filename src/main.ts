@@ -2,7 +2,7 @@
 
 import { Command } from 'commander';
 import { ClaudeBotApp } from './app';
-import { config } from './config';
+import { config, validateConfig } from './config';
 import { logger } from './logger';
 import { PidManager } from './pid-manager';
 
@@ -138,23 +138,28 @@ program
       }
       
       if (status.isRunning) {
-        // 追加の情報を取得
+        // 追加の情報を取得（GitHub設定が必要）
         try {
-          const app = new ClaudeBotApp();
-          const appStatus = await app.getStatus();
-          
-          console.log('\n📈 Application Status:');
-          console.log(`- Processing Mentions: ${appStatus.isProcessingMentions ? '🔄 Yes' : '💤 No'}`);
-          console.log(`- Running Executions: ${appStatus.runningExecutions}`);
-          console.log(`- Repository: ${appStatus.repository.fullName}`);
-          
-          if (appStatus.todayStats) {
-            console.log('\n📊 Today\'s Statistics:');
-            console.log(`- Total Checks: ${appStatus.todayStats.totalChecks}`);
-            console.log(`- New Mentions: ${appStatus.todayStats.newMentions}`);
-            console.log(`- Processed Mentions: ${appStatus.todayStats.processedMentions}`);
-            console.log(`- API Calls: ${appStatus.todayStats.apiCalls}`);
-            console.log(`- Tokens Used: ${appStatus.todayStats.tokensUsed || 0}`);
+          // GitHub設定がある場合のみ詳細ステータスを取得
+          if (config.github.token && config.github.owner && config.github.repo) {
+            const app = new ClaudeBotApp();
+            const appStatus = await app.getStatus();
+            
+            console.log('\n📈 Application Status:');
+            console.log(`- Processing Mentions: ${appStatus.isProcessingMentions ? '🔄 Yes' : '💤 No'}`);
+            console.log(`- Running Executions: ${appStatus.runningExecutions}`);
+            console.log(`- Repository: ${appStatus.repository.fullName}`);
+            
+            if (appStatus.todayStats) {
+              console.log('\n📊 Today\'s Statistics:');
+              console.log(`- Total Checks: ${appStatus.todayStats.totalChecks}`);
+              console.log(`- New Mentions: ${appStatus.todayStats.newMentions}`);
+              console.log(`- Processed Mentions: ${appStatus.todayStats.processedMentions}`);
+              console.log(`- API Calls: ${appStatus.todayStats.apiCalls}`);
+              console.log(`- Tokens Used: ${appStatus.todayStats.tokensUsed || 0}`);
+            }
+          } else {
+            console.log('\n📈 Application Status: Limited (GitHub credentials not configured)');
           }
         } catch (error) {
           console.log('\n⚠️  Could not get detailed application status');
@@ -199,6 +204,9 @@ program
   .action(async () => {
     try {
       logger.info('Testing configuration...');
+
+      // 設定をバリデーション
+      validateConfig();
 
       // 設定の読み込みをテスト
       console.log('Configuration loaded:');
