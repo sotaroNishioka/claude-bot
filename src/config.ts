@@ -1,7 +1,7 @@
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import dotenv from 'dotenv';
 import { Config } from './types';
-import { resolve } from 'path';
-import { existsSync } from 'fs';
 
 dotenv.config();
 
@@ -14,7 +14,7 @@ export const config: Config = {
   claude: {
     apiKey: process.env.CLAUDE_API_KEY || '',
     cliPath: process.env.CLAUDE_CLI_PATH || 'claude',
-    dailyTokenLimit: parseInt(process.env.DAILY_TOKEN_LIMIT || '45000', 10),
+    dailyTokenLimit: Number.parseInt(process.env.DAILY_TOKEN_LIMIT || '45000', 10),
   },
   project: {
     targetPath: process.env.TARGET_PROJECT_PATH || '../target-project',
@@ -70,7 +70,7 @@ if (!existsSync(resolvedPromptsPath)) {
   console.warn(`Prompts directory does not exist: ${resolvedPromptsPath}`);
   console.warn('Creating prompts directory...');
   try {
-    require('fs').mkdirSync(resolvedPromptsPath, { recursive: true });
+    require('node:fs').mkdirSync(resolvedPromptsPath, { recursive: true });
   } catch (error) {
     console.error('Failed to create prompts directory:', error);
   }
