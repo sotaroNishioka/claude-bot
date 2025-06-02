@@ -122,6 +122,9 @@ export interface Config {
     patterns: string[];
     enableAutoResponse: boolean;
   };
+  processing: {
+    maxConcurrentExecutions: number;
+  };
   system: {
     environment: 'development' | 'production';
     debug: boolean;

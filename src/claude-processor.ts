@@ -10,13 +10,33 @@ import type { MentionEvent } from './types';
 export class ClaudeProcessor {
   private githubClient: GitHubClient;
   private tracker: MentionTracker;
+  private static runningExecutions = 0; // 現在実行中のClaude Code数
 
   constructor(githubClient: GitHubClient, tracker: MentionTracker) {
     this.githubClient = githubClient;
     this.tracker = tracker;
   }
 
+  static getRunningExecutions(): number {
+    return ClaudeProcessor.runningExecutions;
+  }
+
   async processMention(mention: MentionEvent): Promise<void> {
+    // 同時実行数が上限に達している場合はスキップ
+    if (ClaudeProcessor.runningExecutions >= config.processing.maxConcurrentExecutions) {
+      logger.warn(
+        `Claude Codeの同時実行数が上限(${config.processing.maxConcurrentExecutions})に達しているためメンションをスキップします`,
+        {
+          type: mention.type,
+          id: mention.id,
+          user: mention.user,
+          currentRunning: ClaudeProcessor.runningExecutions,
+          maxAllowed: config.processing.maxConcurrentExecutions,
+        }
+      );
+      return;
+    }
+
     try {
       logger.info('メンションを処理中', {
         type: mention.type,
@@ -36,14 +56,28 @@ export class ClaudeProcessor {
         return;
       }
 
-      // プロンプトを読み込み、Claudeを実行
-      const prompt = this.loadPrompt(mention);
-      const result = await this.executeClaudeCommand(prompt);
+      // Claude Code実行数をインクリメント
+      ClaudeProcessor.runningExecutions++;
+      logger.debug(
+        `Claude Code実行開始 (${ClaudeProcessor.runningExecutions}/${config.processing.maxConcurrentExecutions})`
+      );
 
-      if (result.success) {
-        await this.respondWithSuccess(mention);
-      } else {
-        await this.respondWithError(mention, result.error || 'Claude execution failed');
+      try {
+        // プロンプトを読み込み、Claudeを実行
+        const prompt = this.loadPrompt(mention);
+        const result = await this.executeClaudeCommand(prompt);
+
+        if (result.success) {
+          await this.respondWithSuccess(mention);
+        } else {
+          await this.respondWithError(mention, result.error || 'Claude Code実行に失敗しました');
+        }
+      } finally {
+        // 実行完了後は必ずカウンタをデクリメント
+        ClaudeProcessor.runningExecutions--;
+        logger.debug(
+          `Claude Code実行終了 (${ClaudeProcessor.runningExecutions}/${config.processing.maxConcurrentExecutions})`
+        );
       }
 
       logger.info('メンションの処理が成功しました', {
@@ -52,7 +86,9 @@ export class ClaudeProcessor {
       });
     } catch (error) {
       logger.error('メンションの処理エラー', { error, mention });
-      await this.respondWithError(mention, `Processing failed: ${error}`);
+      await this.respondWithError(mention, `処理に失敗しました: ${error}`);
+      // エラーが発生した場合もカウンタをデクリメント
+      ClaudeProcessor.runningExecutions--;
     }
   }
 

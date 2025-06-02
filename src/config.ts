@@ -38,6 +38,9 @@ export const config: Config = {
     patterns: (process.env.MENTION_PATTERNS || '@claude,@claude-code').split(','),
     enableAutoResponse: process.env.ENABLE_AUTO_RESPONSE === 'true',
   },
+  processing: {
+    maxConcurrentExecutions: Number.parseInt(process.env.MAX_CONCURRENT_EXECUTIONS || '1', 10),
+  },
   system: {
     environment: (process.env.ENVIRONMENT as 'development' | 'production') || 'production',
     debug: process.env.DEBUG === 'true',
@@ -90,6 +93,15 @@ if (config.claude.dailyTokenLimit <= 0) {
   config.claude.dailyTokenLimit = 45000;
 }
 
+// 同時実行数の検証
+if (
+  config.processing.maxConcurrentExecutions <= 0 ||
+  config.processing.maxConcurrentExecutions > 10
+) {
+  console.warn('MAX_CONCURRENT_EXECUTIONS should be between 1 and 10. Using default: 1');
+  config.processing.maxConcurrentExecutions = 1;
+}
+
 // 他のモジュールで使用するために解決したパスをエクスポート
 export const resolvedPaths = {
   targetProject: resolve(config.project.targetPath),
@@ -104,4 +116,5 @@ console.log('Configuration loaded:', {
   promptsDir: resolvedPaths.prompts,
   environment: config.system.environment,
   dailyTokenLimit: config.claude.dailyTokenLimit,
+  maxConcurrentExecutions: config.processing.maxConcurrentExecutions,
 });

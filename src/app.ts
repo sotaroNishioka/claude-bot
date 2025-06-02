@@ -14,6 +14,7 @@ export class ClaudeBotApp {
   private isRunning = false;
   private detectionJob: cron.ScheduledTask | null = null;
   private backupJob: cron.ScheduledTask | null = null;
+  private isProcessingMentions = false; // Claude処理の同時実行を防ぐフラグ
 
   constructor() {
     this.githubClient = new GitHubClient();
@@ -143,6 +144,12 @@ export class ClaudeBotApp {
     try {
       logger.info('検出サイクルを開始します...');
 
+      // Claude処理が既に実行中の場合はスキップ
+      if (this.isProcessingMentions) {
+        logger.info('Claude処理が既に実行中のため、このサイクルをスキップします');
+        return;
+      }
+
       const since = await this.detector.getLastCheckTime();
       const mentions = await this.detector.detectNewMentions(since);
 
@@ -151,27 +158,42 @@ export class ClaudeBotApp {
         return;
       }
 
-      logger.info(`${mentions.length}件の新しいメンションを発見、処理中...`);
+      logger.info(`${mentions.length}件の新しいメンションを発見、順次処理します`);
 
-      // レート制限を避けるためメンションを順次処理
-      for (const mention of mentions) {
-        try {
-          await this.processor.processMention(mention);
+      // Claude処理フラグをセットして同時実行を防ぐ
+      this.isProcessingMentions = true;
+      let processedCount = 0;
 
-          // API に配慮して処理間に小さな遅延を挿入
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-        } catch (error) {
-          logger.error('個別メンションの処理エラー', {
-            error,
-            mention: {
-              type: mention.type,
-              id: mention.id,
-              user: mention.user,
-            },
-          });
-          // 1つが失敗しても他のメンションの処理を続行
+      try {
+        // レート制限を避けるためメンションを順次処理
+        for (const mention of mentions) {
+          try {
+            await this.processor.processMention(mention);
+            processedCount++;
+
+            // API に配慮して処理間に小さな遅延を挿入
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+          } catch (error) {
+            logger.error('個別メンションの処理エラー', {
+              error,
+              mention: {
+                type: mention.type,
+                id: mention.id,
+                user: mention.user,
+              },
+            });
+            // 1つが失敗しても他のメンションの処理を続行
+          }
         }
+      } finally {
+        // 処理完了後は必ずフラグをリセット
+        this.isProcessingMentions = false;
       }
+
+      logger.info(`メンション処理完了: ${processedCount}/${mentions.length}件処理しました`, {
+        processedCount,
+        totalMentions: mentions.length,
+      });
 
       await this.detector.updateLastCheckTime();
 
@@ -281,6 +303,8 @@ export class ClaudeBotApp {
 
     return {
       isRunning: this.isRunning,
+      isProcessingMentions: this.isProcessingMentions,
+      runningExecutions: ClaudeProcessor.getRunningExecutions(),
       repository: repoInfo,
       todayStats: stats,
       configuration: {
@@ -288,6 +312,7 @@ export class ClaudeBotApp {
         backupInterval: config.cron.backupInterval,
         dailyTokenLimit: config.claude.dailyTokenLimit,
         mentionPatterns: config.mention.patterns,
+        maxConcurrentExecutions: config.processing.maxConcurrentExecutions,
       },
     };
   }

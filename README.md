@@ -105,6 +105,9 @@ CLAUDE_BOT_PATH=/home/pi/Develop/claude-bot
 MENTION_PATTERNS=@claude,@claude-code  # カンマ区切りパターン
 ENABLE_AUTO_RESPONSE=true
 
+# 処理設定
+MAX_CONCURRENT_EXECUTIONS=1  # Claude Code同時実行数
+
 # スケジューリング（Cron 式）
 DETECTION_INTERVAL="*/5 * * * *"  # 5分毎
 BACKUP_INTERVAL="0 2 * * *"       # 毎日午前2時
@@ -245,6 +248,7 @@ GitHub Issue に関してサポートします。以下のリクエストを分�
 | `DAILY_TOKEN_LIMIT` | 1日の最大 Claude トークン数 | `45000` | ❌ |
 | `MENTION_PATTERNS` | カンマ区切りメンションパターン | `@claude,@claude-code` | ❌ |
 | `ENABLE_AUTO_RESPONSE` | 自動応答を有効化 | `false` | ❌ |
+| `MAX_CONCURRENT_EXECUTIONS` | Claude Code同時実行数 | `1` | ❌ |
 | `DETECTION_INTERVAL` | メンション検出の Cron 式 | `*/5 * * * *` | ❌ |
 | `BACKUP_INTERVAL` | データベースバックアップの Cron 式 | `0 2 * * *` | ❌ |
 | `LOG_LEVEL` | ログレベル | `info` | ❌ |
