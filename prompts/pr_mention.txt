@@ -1,0 +1,4 @@
+# PR メンション用プロンプト
+# Pull Request の本文で @claude がメンションされた時に使用
+
+{{USER_REQUEST}}

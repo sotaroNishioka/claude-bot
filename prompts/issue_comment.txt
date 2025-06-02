@@ -1,0 +1,4 @@
+# Issue コメント用プロンプト
+# Issue のコメントで @claude がメンションされた時に使用
+
+{{USER_REQUEST}}
