@@ -179,11 +179,11 @@ export class ClaudeProcessor {
         }
       });
 
-      // 5分タイムアウト
+      // 30分タイムアウト
       setTimeout(() => {
         childProcess.kill('SIGTERM');
-        resolve({ success: false, error: 'Command timeout (5 minutes)' });
-      }, 300000);
+        resolve({ success: false, error: 'Command timeout (30 minutes)' });
+      }, 1800000);
     });
   }
 
