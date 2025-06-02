@@ -98,7 +98,6 @@ export interface Config {
   claude: {
     apiKey: string;
     cliPath: string;
-    dailyTokenLimit: number;
   };
   project: {
     targetPath: string;
@@ -106,10 +105,6 @@ export interface Config {
   };
   prompts: {
     dir: string;
-    issueMention: string;
-    issueComment: string;
-    prMention: string;
-    prComment: string;
   };
   database: {
     path: string;
@@ -130,18 +125,4 @@ export interface Config {
     environment: 'development' | 'production';
     debug: boolean;
   };
-}
-
-export interface ClaudeCommand {
-  action: 'implement' | 'review' | 'analyze' | 'improve' | 'test' | 'help';
-  target: 'issue' | 'pr';
-  targetNumber: number;
-  parameters: string;
-  user: string;
-  promptFile?: string;
-}
-
-export interface PromptTemplate {
-  content: string;
-  variables: string[];
 }

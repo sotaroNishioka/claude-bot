@@ -14,7 +14,6 @@ export const config: Config = {
   claude: {
     apiKey: process.env.CLAUDE_API_KEY || '',
     cliPath: process.env.CLAUDE_CLI_PATH || 'claude',
-    dailyTokenLimit: parseInt(process.env.DAILY_TOKEN_LIMIT || '45000'),
   },
   project: {
     targetPath: process.env.TARGET_PROJECT_PATH || '../target-project',
@@ -22,10 +21,6 @@ export const config: Config = {
   },
   prompts: {
     dir: process.env.PROMPTS_DIR || './prompts',
-    issueMention: process.env.ISSUE_MENTION_PROMPT || 'issue_mention.txt',
-    issueComment: process.env.ISSUE_COMMENT_PROMPT || 'issue_comment.txt',
-    prMention: process.env.PR_MENTION_PROMPT || 'pr_mention.txt',
-    prComment: process.env.PR_COMMENT_PROMPT || 'pr_comment.txt',
   },
   database: {
     path: process.env.DATABASE_PATH || './mention_tracker.db',
@@ -68,7 +63,7 @@ if (!existsSync(resolvedTargetPath)) {
   console.warn('Please ensure TARGET_PROJECT_PATH points to a valid directory');
 }
 
-// Prompts directory validation
+// Prompts directory validation and creation
 const resolvedPromptsPath = resolve(config.prompts.dir);
 if (!existsSync(resolvedPromptsPath)) {
   console.warn(`Prompts directory does not exist: ${resolvedPromptsPath}`);
