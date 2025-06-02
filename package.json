@@ -10,12 +10,12 @@
     "daemon": "npm run build && node dist/main.js --daemon",
     "setup": "npm run build && node dist/setup.js",
     "test": "jest",
-    "format": "biome format --write .",
-    "format:check": "biome format .",
-    "lint": "biome lint .",
-    "lint:fix": "biome lint --apply .",
-    "check": "biome check .",
-    "check:fix": "biome check --apply .",
+    "format": "npx @biomejs/biome format --write .",
+    "format:check": "npx @biomejs/biome format .",
+    "lint": "npx @biomejs/biome lint .",
+    "lint:fix": "npx @biomejs/biome lint --apply .",
+    "check": "npx @biomejs/biome check .",
+    "check:fix": "npx @biomejs/biome check --apply .",
     "type-check": "tsc --noEmit"
   },
   "keywords": [
