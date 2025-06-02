@@ -95,7 +95,6 @@ GITHUB_REPO=your_repository_name
 
 # Claude Code 設定（必須）
 CLAUDE_CLI_PATH=/usr/local/bin/claude  # またはカスタムパス
-DAILY_TOKEN_LIMIT=45000
 
 # プロジェクトパス
 TARGET_PROJECT_PATH=../target-project
@@ -265,7 +264,6 @@ GitHub Issue の実装をサポートします。
 | `CLAUDE_CLI_PATH` | Claude CLI 実行ファイルのパス | `claude` | ❌ |
 | `TARGET_PROJECT_PATH` | ターゲットプロジェクトディレクトリのパス | `../target-project` | ❌ |
 | `CLAUDE_BOT_PATH` | Claude Bot ディレクトリのパス | `現在のディレクトリ` | ❌ |
-| `DAILY_TOKEN_LIMIT` | 1日の最大 Claude トークン数 | `45000` | ❌ |
 | `MENTION_PATTERNS` | カンマ区切りメンションパターン | `@claude,@claude-code` | ❌ |
 | `ENABLE_AUTO_RESPONSE` | 自動応答を有効化 | `false` | ❌ |
 | `MAX_CONCURRENT_EXECUTIONS` | Claude Code同時実行数（1-10） | `1` | ❌ |
@@ -427,7 +425,6 @@ npm run dev -- status
   "configuration": {
     "detectionInterval": "*/5 * * * *",
     "backupInterval": "0 2 * * *",
-    "dailyTokenLimit": 45000,
     "mentionPatterns": ["@claude", "@claude-code"],
     "maxConcurrentExecutions": 3
   }

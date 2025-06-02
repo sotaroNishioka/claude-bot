@@ -364,7 +364,6 @@ interface Config {
   };
   claude: {
     cliPath: string;
-    dailyTokenLimit: number;
   };
   paths: {
     targetProject: string;
@@ -625,7 +624,6 @@ npm run dev -- run-once
 
 | 変数名 | デフォルト値 | 説明 |
 |--------|--------------|------|
-| `DAILY_TOKEN_LIMIT` | `45000` | 1日のトークン使用制限 |
 | `TARGET_PROJECT_PATH` | `../target-project` | ターゲットプロジェクトパス |
 | `CLAUDE_BOT_PATH` | `process.cwd()` | Claude Bot ディレクトリ |
 | `MENTION_PATTERNS` | `@claude,@claude-code` | メンションパターン |

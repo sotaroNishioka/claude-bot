@@ -97,7 +97,6 @@ export interface Config {
   };
   claude: {
     cliPath: string;
-    dailyTokenLimit: number;
   };
   project: {
     targetPath: string;
