@@ -1,4 +1,1 @@
-# PR コメント用プロンプト
-# Pull Request のコメントで @claude がメンションされた時に使用
-
 {{USER_REQUEST}}

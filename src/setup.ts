@@ -2,7 +2,7 @@ import { MentionTracker } from './database';
 import { GitHubClient } from './github-client';
 import { logger } from './logger';
 import { config, resolvedPaths } from './config';
-import { existsSync } from 'fs';
+import { existsSync, writeFileSync } from 'fs';
 import { spawn } from 'child_process';
 
 async function checkClaudeCLI(): Promise<boolean> {
@@ -25,6 +25,29 @@ async function checkClaudeCLI(): Promise<boolean> {
       resolve(false);
     }, 5000);
   });
+}
+
+function createDefaultPrompts(): void {
+  const defaultPrompts = {
+    'issue.txt': '{{USER_REQUEST}}',
+    'issue_comment.txt': '{{USER_REQUEST}}',
+    'pr.txt': '{{USER_REQUEST}}',
+    'pr_comment.txt': '{{USER_REQUEST}}',
+  };
+
+  for (const [filename, content] of Object.entries(defaultPrompts)) {
+    const promptPath = `${resolvedPaths.prompts}/${filename}`;
+    if (!existsSync(promptPath)) {
+      try {
+        writeFileSync(promptPath, content);
+        console.log(`✅ Created prompt file: ${filename}`);
+      } catch (error) {
+        console.log(`⚠️  Failed to create prompt file: ${filename}`);
+      }
+    } else {
+      console.log(`✓ Prompt file exists: ${filename}`);
+    }
+  }
 }
 
 async function setup() {
@@ -59,6 +82,10 @@ async function setup() {
       console.log('Installation guide: https://docs.anthropic.com/claude-code/setup');
     }
     
+    // Create default prompt files
+    console.log('📝 Creating default prompt files...');
+    createDefaultPrompts();
+    
     // Initialize database
     console.log('📊 Initializing database...');
     const tracker = new MentionTracker();
@@ -86,8 +113,8 @@ async function setup() {
     console.log(`- Repository: ${config.github.owner}/${config.github.repo}`);
     console.log(`- Target Project: ${resolvedPaths.targetProject}`);
     console.log(`- Claude CLI: ${config.claude.cliPath}`);
+    console.log(`- Prompts Dir: ${resolvedPaths.prompts}`);
     console.log(`- Detection interval: ${config.cron.detectionInterval}`);
-    console.log(`- Daily token limit: ${config.claude.dailyTokenLimit}`);
     console.log(`- Mention patterns: ${config.mention.patterns.join(', ')}`);
     
     console.log('\n🚀 Next steps:');
