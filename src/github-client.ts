@@ -37,6 +37,38 @@ export class GitHubClient {
     }
   }
 
+  async getIssueDetails(issueNumber: number): Promise<GitHubIssue> {
+    try {
+      const { data } = await this.octokit.rest.issues.get({
+        owner: this.owner,
+        repo: this.repo,
+        issue_number: issueNumber,
+      });
+
+      logger.debug('Fetched issue details', { issueNumber });
+      return data as GitHubIssue;
+    } catch (error) {
+      logger.error('Error fetching issue details', { error, issueNumber });
+      throw error;
+    }
+  }
+
+  async getPullRequestDetails(prNumber: number): Promise<GitHubPullRequest> {
+    try {
+      const { data } = await this.octokit.rest.pulls.get({
+        owner: this.owner,
+        repo: this.repo,
+        pull_number: prNumber,
+      });
+
+      logger.debug('Fetched PR details', { prNumber });
+      return data as GitHubPullRequest;
+    } catch (error) {
+      logger.error('Error fetching PR details', { error, prNumber });
+      throw error;
+    }
+  }
+
   async getPullRequestsSince(since: string): Promise<GitHubPullRequest[]> {
     try {
       const { data } = await this.octokit.rest.pulls.list({
