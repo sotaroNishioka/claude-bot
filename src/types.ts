@@ -78,6 +78,8 @@ export interface MentionHistory {
   parentId?: number;
   userLogin: string;
   mentionContent: string;
+  itemTitle?: string;
+  itemUrl?: string;
   detectedAt: Date;
   processed: boolean;
   processedAt?: Date;

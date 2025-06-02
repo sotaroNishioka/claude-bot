@@ -16,6 +16,7 @@ export class MentionTracker {
       });
 
       await this.createTables();
+      await this.runMigrations();
       logger.info('Database initialized successfully', {
         path: config.database.path,
       });
@@ -54,6 +55,8 @@ export class MentionTracker {
         parent_id INTEGER,
         user_login TEXT NOT NULL,
         mention_content TEXT NOT NULL,
+        item_title TEXT,
+        item_url TEXT,
         detected_at DATETIME NOT NULL,
         processed BOOLEAN DEFAULT FALSE,
         processed_at DATETIME
@@ -82,6 +85,37 @@ export class MentionTracker {
       CREATE INDEX IF NOT EXISTS idx_mention_history_detected 
       ON mention_history(detected_at);
     `);
+  }
+
+  private async runMigrations(): Promise<void> {
+    try {
+      // データベースの現在のスキーマを確認
+      const columns = await this.db.all(`
+        PRAGMA table_info(mention_history)
+      `);
+      
+      const hasItemTitle = columns.some((col: any) => col.name === 'item_title');
+      const hasItemUrl = columns.some((col: any) => col.name === 'item_url');
+      
+      // item_titleカラムがない場合は追加
+      if (!hasItemTitle) {
+        await this.db.exec(`
+          ALTER TABLE mention_history ADD COLUMN item_title TEXT;
+        `);
+        logger.info('Added item_title column to mention_history table');
+      }
+      
+      // item_urlカラムがない場合は追加
+      if (!hasItemUrl) {
+        await this.db.exec(`
+          ALTER TABLE mention_history ADD COLUMN item_url TEXT;
+        `);
+        logger.info('Added item_url column to mention_history table');
+      }
+    } catch (error) {
+      logger.error('Migration failed', { error });
+      throw error;
+    }
   }
 
   calculateContentHash(content: string): string {
@@ -180,16 +214,18 @@ export class MentionTracker {
     itemId: number,
     userLogin: string,
     mentionContent: string,
-    parentId?: number
+    parentId?: number,
+    itemTitle?: string,
+    itemUrl?: string
   ): Promise<number> {
     try {
       const result = await this.db.run(
         `
         INSERT INTO mention_history 
-        (item_type, item_id, parent_id, user_login, mention_content, detected_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+        (item_type, item_id, parent_id, user_login, mention_content, item_title, item_url, detected_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `,
-        [itemType, itemId, parentId, userLogin, mentionContent, new Date().toISOString()]
+        [itemType, itemId, parentId, userLogin, mentionContent, itemTitle, itemUrl, new Date().toISOString()]
       );
 
       const mentionId = result.lastID as number;

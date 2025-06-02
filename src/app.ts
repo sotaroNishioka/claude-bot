@@ -177,8 +177,8 @@ export class ClaudeBotApp {
             user: unprocessed.userLogin,
             detectedAt: unprocessed.detectedAt,
             processed: false,
-            url: this.generateUrl(unprocessed.itemType, unprocessed.itemId, unprocessed.parentId),
-            title: `${unprocessed.itemType} #${unprocessed.itemId}`,
+            url: unprocessed.itemUrl || this.generateUrl(unprocessed.itemType, unprocessed.itemId, unprocessed.parentId),
+            title: unprocessed.itemTitle || `${unprocessed.itemType} #${unprocessed.itemId}`,
             mentionHistoryId: unprocessed.id,
           };
           allMentions.push(mentionEvent);

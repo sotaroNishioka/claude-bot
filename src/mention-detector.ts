@@ -54,7 +54,10 @@ export class MentionDetector {
             'issue',
             issue.number,
             issue.user.login,
-            issue.body || ''
+            issue.body || '',
+            undefined,
+            issue.title,
+            issueUrl
           );
           
           mentions.push({
@@ -90,7 +93,9 @@ export class MentionDetector {
             comment.id,
             comment.user.login,
             comment.body,
-            issueNumber
+            issueNumber,
+            `Issue #${issueNumber} Comment`,
+            commentUrl
           );
           
           mentions.push({
@@ -115,7 +120,15 @@ export class MentionDetector {
         if (changeResult.changed && this.containsMention(pr.body || '')) {
           const prUrl = `https://github.com/${config.github.owner}/${config.github.repo}/pull/${pr.number}`;
           
-          const mentionId = await this.tracker.recordMention('pr', pr.number, pr.user.login, pr.body || '');
+          const mentionId = await this.tracker.recordMention(
+            'pr', 
+            pr.number, 
+            pr.user.login, 
+            pr.body || '',
+            undefined,
+            pr.title,
+            prUrl
+          );
           
           mentions.push({
             type: 'pr',
@@ -151,7 +164,9 @@ export class MentionDetector {
             comment.id,
             comment.user.login,
             comment.body,
-            prNumber
+            prNumber,
+            `Pull Request #${prNumber} Comment`,
+            commentUrl
           );
           
           mentions.push({
