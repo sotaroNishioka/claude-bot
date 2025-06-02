@@ -54,11 +54,11 @@
     "include": [
       "src/**/*.ts",
       "src/**/*.js",
-      "*.json",
-      "*.md",
       "ecosystem.config.js"
     ],
     "ignore": [
+      "*.md",
+      "*.json",
       "node_modules/**",
       "dist/**",
       "logs/**",
