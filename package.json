@@ -9,7 +9,7 @@
     "dev": "tsx src/main.ts",
     "daemon": "npm run build && node dist/main.js --daemon",
     "setup": "npm run build && node dist/setup.js",
-    "test": "jest",
+    "test": "jest --passWithNoTests",
     "format": "npx @biomejs/biome format --write .",
     "format:check": "npx @biomejs/biome format .",
     "lint": "npx @biomejs/biome lint .",
