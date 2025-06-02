@@ -105,7 +105,13 @@ export class MentionTracker {
 
       if (!existing) {
         // 新しいアイテム
-        await this.recordItem(itemType, itemId, contentHash, this.containsMention(content), parentId);
+        await this.recordItem(
+          itemType,
+          itemId,
+          contentHash,
+          this.containsMention(content),
+          parentId
+        );
         return true;
       }
 
