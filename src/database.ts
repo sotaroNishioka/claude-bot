@@ -29,7 +29,7 @@ export class MentionTracker {
   }
 
   private async createTables(): Promise<void> {
-    // Tracked items table
+    // 追跡アイテムテーブル
     await this.db.exec(`
       CREATE TABLE IF NOT EXISTS tracked_items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -45,7 +45,7 @@ export class MentionTracker {
       )
     `);
 
-    // Mention history table
+    // メンション履歴テーブル
     await this.db.exec(`
       CREATE TABLE IF NOT EXISTS mention_history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -60,7 +60,7 @@ export class MentionTracker {
       )
     `);
 
-    // Processing stats table
+    // 処理統計テーブル
     await this.db.exec(`
       CREATE TABLE IF NOT EXISTS processing_stats (
         date TEXT PRIMARY KEY,
@@ -72,7 +72,7 @@ export class MentionTracker {
       )
     `);
 
-    // Create indexes for performance
+    // パフォーマンス向上のためのインデックスを作成
     await this.db.exec(`
       CREATE INDEX IF NOT EXISTS idx_tracked_items_type_id 
       ON tracked_items(item_type, item_id);
@@ -104,18 +104,18 @@ export class MentionTracker {
       );
 
       if (!existing) {
-        // New item
+        // 新しいアイテム
         await this.recordItem(itemType, itemId, contentHash, this.containsMention(content), parentId);
         return true;
       }
 
       if (existing.contentHash !== contentHash) {
-        // Content changed
+        // コンテンツが変更された
         await this.updateItem(itemType, itemId, contentHash, this.containsMention(content));
         return true;
       }
 
-      // No change, just update last_checked
+      // 変更なし、last_checkedのみ更新
       await this.db.run(
         'UPDATE tracked_items SET last_checked = ? WHERE item_type = ? AND item_id = ?',
         [now.toISOString(), itemType, itemId]

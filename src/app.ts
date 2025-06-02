@@ -24,28 +24,28 @@ export class ClaudeBotApp {
 
   async initialize(): Promise<void> {
     try {
-      logger.info('Initializing Claude Bot...');
+      logger.info('Claude Botを初期化中...');
 
-      // Initialize database
+      // データベースを初期化
       await this.tracker.init();
 
-      // Verify GitHub connection
+      // GitHub接続を確認
       const repoInfo = await this.githubClient.getRepositoryInfo();
-      logger.info('Connected to GitHub repository', repoInfo);
+      logger.info('GitHubリポジトリに接続しました', repoInfo);
 
-      // Setup graceful shutdown
+      // 優雅なシャットダウンをセットアップ
       this.setupGracefulShutdown();
 
-      logger.info('Claude Bot initialized successfully');
+      logger.info('Claude Botの初期化が完了しました');
     } catch (error) {
-      logger.error('Failed to initialize Claude Bot', { error });
+      logger.error('Claude Botの初期化に失敗しました', { error });
       throw error;
     }
   }
 
   async start(): Promise<void> {
     if (this.isRunning) {
-      logger.warn('Claude Bot is already running');
+      logger.warn('Claude Botは既に実行中です');
       return;
     }
 
@@ -54,19 +54,19 @@ export class ClaudeBotApp {
 
       this.isRunning = true;
 
-      // Setup cron jobs
+      // cronジョブをセットアップ
       this.setupDetectionJob();
       this.setupBackupJob();
 
-      logger.info('Claude Bot started successfully', {
+      logger.info('Claude Botの開始が成功しました', {
         detectionInterval: config.cron.detectionInterval,
         backupInterval: config.cron.backupInterval,
       });
 
-      // Run initial detection
+      // 初回検出を実行
       await this.runDetectionCycle();
     } catch (error) {
-      logger.error('Failed to start Claude Bot', { error });
+      logger.error('Claude Botの開始に失敗しました', { error });
       this.isRunning = false;
       throw error;
     }
@@ -74,15 +74,15 @@ export class ClaudeBotApp {
 
   async stop(): Promise<void> {
     if (!this.isRunning) {
-      logger.warn('Claude Bot is not running');
+      logger.warn('Claude Botは実行されていません');
       return;
     }
 
-    logger.info('Stopping Claude Bot...');
+    logger.info('Claude Botを停止中...');
 
     this.isRunning = false;
 
-    // Stop cron jobs
+    // cronジョブを停止
     if (this.detectionJob) {
       this.detectionJob.stop();
       this.detectionJob = null;
@@ -93,10 +93,10 @@ export class ClaudeBotApp {
       this.backupJob = null;
     }
 
-    // Close database connection
+    // データベース接続を閉じる
     await this.tracker.close();
 
-    logger.info('Claude Bot stopped successfully');
+    logger.info('Claude Botの停止が完了しました');
   }
 
   private setupDetectionJob(): void {
@@ -114,7 +114,7 @@ export class ClaudeBotApp {
     );
 
     this.detectionJob.start();
-    logger.info('Detection cron job scheduled', {
+    logger.info('検出Cronジョブをスケジュールしました', {
       interval: config.cron.detectionInterval,
     });
   }
@@ -134,34 +134,34 @@ export class ClaudeBotApp {
     );
 
     this.backupJob.start();
-    logger.info('Backup cron job scheduled', {
+    logger.info('バックアップCronジョブをスケジュールしました', {
       interval: config.cron.backupInterval,
     });
   }
 
   private async runDetectionCycle(): Promise<void> {
     try {
-      logger.info('Starting detection cycle...');
+      logger.info('検出サイクルを開始します...');
 
       const since = await this.detector.getLastCheckTime();
       const mentions = await this.detector.detectNewMentions(since);
 
       if (mentions.length === 0) {
-        logger.debug('No new mentions found');
+        logger.debug('新しいメンションは見つかりませんでした');
         return;
       }
 
-      logger.info(`Found ${mentions.length} new mentions, processing...`);
+      logger.info(`${mentions.length}件の新しいメンションを発見、処理中...`);
 
-      // Process mentions sequentially to avoid rate limits
+      // レート制限を避けるためメンションを順次処理
       for (const mention of mentions) {
         try {
           await this.processor.processMention(mention);
 
-          // Small delay between processing to be respectful to APIs
+          // API に配慮して処理間に小さな遅延を挿入
           await new Promise((resolve) => setTimeout(resolve, 2000));
         } catch (error) {
-          logger.error('Error processing individual mention', {
+          logger.error('個別メンションの処理エラー', {
             error,
             mention: {
               type: mention.type,
@@ -169,41 +169,41 @@ export class ClaudeBotApp {
               user: mention.user,
             },
           });
-          // Continue processing other mentions even if one fails
+          // 1つが失敗しても他のメンションの処理を続行
         }
       }
 
       await this.detector.updateLastCheckTime();
 
-      logger.info('Detection cycle completed', {
+      logger.info('検出サイクルが完了しました', {
         totalMentions: mentions.length,
         since,
       });
     } catch (error) {
-      logger.error('Detection cycle failed', { error });
-      // Don't throw to prevent stopping the entire service
+      logger.error('検出サイクルが失敗しました', { error });
+      // サービス全体の停止を防ぐため例外をスローしない
     }
   }
 
   private async runBackup(): Promise<void> {
     try {
-      logger.info('Starting database backup...');
+      logger.info('データベースバックアップを開始します...');
 
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const backupPath = `./backups/mention_tracker_${timestamp}.db`;
 
-      // Ensure backup directory exists
+      // バックアップディレクトリの存在を確保
       const { mkdir } = await import('node:fs/promises');
       await mkdir('./backups', { recursive: true });
 
       await this.tracker.backup(backupPath);
 
-      logger.info('Database backup completed', { backupPath });
+      logger.info('データベースバックアップが完了しました', { backupPath });
 
-      // Cleanup old backups (keep last 7 days)
+      // 古いバックアップをクリーンアップ（直近7日間を保持）
       await this.cleanupOldBackups();
     } catch (error) {
-      logger.error('Backup failed', { error });
+      logger.error('バックアップが失敗しました', { error });
     }
   }
 
@@ -215,7 +215,7 @@ export class ClaudeBotApp {
       const backupDir = './backups';
       const files = await readdir(backupDir);
 
-      const cutoffTime = Date.now() - 7 * 24 * 60 * 60 * 1000; // 7 days ago
+      const cutoffTime = Date.now() - 7 * 24 * 60 * 60 * 1000; // 7日前
 
       for (const file of files) {
         if (file.startsWith('mention_tracker_') && file.endsWith('.db')) {
@@ -224,24 +224,24 @@ export class ClaudeBotApp {
 
           if (stats.mtime.getTime() < cutoffTime) {
             await unlink(filePath);
-            logger.debug('Deleted old backup', { file });
+            logger.debug('古いバックアップを削除しました', { file });
           }
         }
       }
     } catch (error) {
-      logger.warn('Failed to cleanup old backups', { error });
+      logger.warn('古いバックアップのクリーンアップに失敗しました', { error });
     }
   }
 
   private setupGracefulShutdown(): void {
     const shutdown = async (signal: string) => {
-      logger.info(`Received ${signal}, shutting down gracefully...`);
+      logger.info(`${signal}を受信、優雅にシャットダウン中...`);
 
       try {
         await this.stop();
         process.exit(0);
       } catch (error) {
-        logger.error('Error during shutdown', { error });
+        logger.error('シャットダウン中のエラー', { error });
         process.exit(1);
       }
     };
@@ -249,14 +249,14 @@ export class ClaudeBotApp {
     process.on('SIGTERM', () => shutdown('SIGTERM'));
     process.on('SIGINT', () => shutdown('SIGINT'));
 
-    // Handle uncaught exceptions
+    // 未処理例外をハンドル
     process.on('uncaughtException', (error) => {
-      logger.error('Uncaught exception', { error });
+      logger.error('キャッチされない例外', { error });
       shutdown('uncaughtException');
     });
 
     process.on('unhandledRejection', (reason, promise) => {
-      logger.error('Unhandled rejection', { reason, promise });
+      logger.error('ハンドルされないPromiseの拒否', { reason, promise });
       shutdown('unhandledRejection');
     });
   }
@@ -265,11 +265,11 @@ export class ClaudeBotApp {
     try {
       await this.initialize();
 
-      logger.info('Running single detection cycle...');
+      logger.info('単発検出サイクルを実行中...');
 
       await this.runDetectionCycle();
 
-      logger.info('Single detection cycle completed');
+      logger.info('単発検出サイクルが完了しました');
     } finally {
       await this.tracker.close();
     }

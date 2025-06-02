@@ -19,7 +19,7 @@ export class MentionDetector {
       return this.lastCheckTime.toISOString();
     }
 
-    // Default to 1 hour ago if no previous check
+    // 前回チェックがない場合は1時間前をデフォルトに
     const oneHourAgo = new Date();
     oneHourAgo.setHours(oneHourAgo.getHours() - 1);
     return oneHourAgo.toISOString();
@@ -39,7 +39,7 @@ export class MentionDetector {
     try {
       logger.debug('Starting mention detection', { since: sinceTime });
 
-      // Check issues
+      // Issueをチェック
       const issues = await this.githubClient.getIssuesSince(sinceTime);
       for (const issue of issues) {
         const hasChanged = await this.tracker.isContentChanged(
@@ -66,7 +66,7 @@ export class MentionDetector {
         }
       }
 
-      // Check issue comments
+      // Issueコメントをチェック
       const issueComments = await this.githubClient.getIssueCommentsSince(sinceTime);
       for (const comment of issueComments) {
         const issueNumber = this.githubClient.extractIssueNumber(comment.issue_url);
@@ -97,7 +97,7 @@ export class MentionDetector {
         }
       }
 
-      // Check pull requests
+      // Pull Requestをチェック
       const prs = await this.githubClient.getPullRequestsSince(sinceTime);
       for (const pr of prs) {
         const hasChanged = await this.tracker.isContentChanged('pr', pr.number, pr.body || '');
@@ -115,10 +115,10 @@ export class MentionDetector {
         }
       }
 
-      // Check PR comments
+      // PRコメントをチェック
       const prComments = await this.githubClient.getPullRequestCommentsSince(sinceTime);
       for (const comment of prComments) {
-        // For PR comments, the issue_url already points to the correct resource
+        // PRコメントの場合、issue_urlは既に正しいリソースを指している
         const prNumber = this.githubClient.extractIssueNumber(comment.issue_url);
         const hasChanged = await this.tracker.isContentChanged(
           'pr_comment',
@@ -147,7 +147,7 @@ export class MentionDetector {
         }
       }
 
-      // Update statistics
+      // 統計情報を更新
       await this.tracker.updateDailyStats(mentions.length, 1);
 
       logger.info('Mention detection completed', {

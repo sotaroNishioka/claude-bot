@@ -26,7 +26,7 @@ program
     try {
       await app.start();
 
-      // Keep the process running
+      // プロセスを実行状態に保つ
       process.stdin.resume();
     } catch (error) {
       logger.error('Failed to start Claude Bot', { error });
@@ -79,7 +79,7 @@ program
 
       logger.info('Database initialized successfully');
 
-      // Test GitHub connection
+      // GitHub接続をテスト
       const { GitHubClient } = await import('./github-client');
       const github = new GitHubClient();
       const repoInfo = await github.getRepositoryInfo();
@@ -111,14 +111,14 @@ program
     try {
       logger.info('Testing configuration...');
 
-      // Test config loading
+      // 設定の読み込みをテスト
       console.log('Configuration loaded:');
       console.log(`- GitHub: ${config.github.owner}/${config.github.repo}`);
       console.log(`- Database: ${config.database.path}`);
       console.log(`- Token limit: ${config.claude.dailyTokenLimit}`);
       console.log(`- Mention patterns: ${config.mention.patterns.join(', ')}`);
 
-      // Test GitHub connection
+      // GitHub接続をテスト
       const { GitHubClient } = await import('./github-client');
       const github = new GitHubClient();
       const repoInfo = await github.getRepositoryInfo();
@@ -128,7 +128,7 @@ program
       console.log(`- Language: ${repoInfo.language}`);
       console.log(`- Stars: ${repoInfo.stars}`);
 
-      // Test database connection
+      // データベース接続をテスト
       const { MentionTracker } = await import('./database');
       const tracker = new MentionTracker();
       await tracker.init();

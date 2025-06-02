@@ -26,7 +26,7 @@ export class GitHubClient {
         per_page: 100,
       });
 
-      // Filter out pull requests (GitHub API includes PRs in issues)
+      // Pull Requestをフィルタリング（GitHub APIはissuesにPRも含む）
       const issues = data.filter((issue) => !issue.pull_request) as GitHubIssue[];
 
       logger.debug('Fetched issues since', { since, count: issues.length });
@@ -46,7 +46,7 @@ export class GitHubClient {
         per_page: 100,
       });
 
-      // Filter by update time since GitHub API doesn't support 'since' for PRs
+      // GitHub APIはPRに'since'をサポートしないため更新時刻でフィルタリング
       const pullRequests = data.filter((pr) => pr.updated_at > since) as GitHubPullRequest[];
 
       logger.debug('Fetched pull requests since', {
@@ -82,7 +82,7 @@ export class GitHubClient {
 
   async getPullRequestCommentsSince(since: string): Promise<GitHubComment[]> {
     try {
-      // Get review comments
+      // レビューコメントを取得
       const { data: reviewComments } = await this.octokit.rest.pulls.listReviewCommentsForRepo({
         owner: this.owner,
         repo: this.repo,
@@ -90,7 +90,7 @@ export class GitHubClient {
         per_page: 100,
       });
 
-      // Convert to common format
+      // 共通フォーマットに変換
       const comments: GitHubComment[] = reviewComments.map((comment) => ({
         id: comment.id,
         issue_url: comment.pull_request_url.replace('/pulls/', '/issues/'),

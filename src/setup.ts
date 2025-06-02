@@ -19,7 +19,7 @@ async function checkClaudeCLI(): Promise<boolean> {
       resolve(false);
     });
 
-    // Timeout after 5 seconds
+    // 5秒後にタイムアウト
     setTimeout(() => {
       process.kill('SIGTERM');
       resolve(false);
@@ -54,12 +54,12 @@ async function setup() {
   try {
     console.log('🚀 Setting up Claude Bot...');
 
-    // Check target project directory
+    // ターゲットプロジェクトディレクトリをチェック
     console.log('📁 Checking target project directory...');
     if (existsSync(resolvedPaths.targetProject)) {
       console.log(`✅ Target project found: ${resolvedPaths.targetProject}`);
 
-      // Check if it's a git repository
+      // gitリポジトリかどうかをチェック
       const gitPath = `${resolvedPaths.targetProject}/.git`;
       if (existsSync(gitPath)) {
         console.log('✅ Git repository detected');
@@ -71,7 +71,7 @@ async function setup() {
       console.log('Please create the target project directory or update TARGET_PROJECT_PATH');
     }
 
-    // Check Claude CLI
+    // Claude CLIをチェック
     console.log('🤖 Checking Claude CLI...');
     const claudeAvailable = await checkClaudeCLI();
     if (claudeAvailable) {
@@ -82,30 +82,30 @@ async function setup() {
       console.log('Installation guide: https://docs.anthropic.com/claude-code/setup');
     }
 
-    // Create default prompt files
+    // デフォルトプロンプトファイルを作成
     console.log('📝 Creating default prompt files...');
     createDefaultPrompts();
 
-    // Initialize database
+    // データベースを初期化
     console.log('📊 Initializing database...');
     const tracker = new MentionTracker();
     await tracker.init();
     console.log('✅ Database initialized');
 
-    // Test GitHub connection
+    // GitHub接続をテスト
     console.log('🐙 Testing GitHub connection...');
     const github = new GitHubClient();
     const repoInfo = await github.getRepositoryInfo();
     console.log(`✅ Connected to ${repoInfo.fullName}`);
 
-    // Create necessary directories
+    // 必要なディレクトリを作成
     console.log('📁 Creating directories...');
     const { mkdir } = await import('node:fs/promises');
     await mkdir('./logs', { recursive: true });
     await mkdir('./backups', { recursive: true });
     console.log('✅ Directories created');
 
-    // Close connections
+    // 接続を閉じる
     await tracker.close();
 
     console.log('\n🎉 Setup completed!');
@@ -122,7 +122,7 @@ async function setup() {
       console.log('1. Create target project directory:');
       console.log(`   mkdir -p ${resolvedPaths.targetProject}`);
       console.log(`   cd ${resolvedPaths.targetProject}`);
-      console.log('   git init  # If starting a new project');
+      console.log('   git init  # 新しいプロジェクトを開始する場合');
     }
 
     if (!claudeAvailable) {

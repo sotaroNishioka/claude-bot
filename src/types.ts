@@ -49,7 +49,7 @@ export interface GitHubPullRequest {
 export interface MentionEvent {
   type: 'issue' | 'issue_comment' | 'pr' | 'pr_comment';
   id: number;
-  parentId?: number; // Issue/PR number for comments
+  parentId?: number; // コメント用のIssue/PR番号
   content: string;
   user: string;
   detectedAt: Date;

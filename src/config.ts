@@ -44,7 +44,7 @@ export const config: Config = {
   },
 };
 
-// Validation
+// バリデーション
 if (!config.github.token) {
   throw new Error('GITHUB_TOKEN is required');
 }
@@ -57,14 +57,14 @@ if (!config.claude.apiKey) {
   console.warn('CLAUDE_API_KEY is not set. Claude Code features will be disabled.');
 }
 
-// Path validation
+// パスの検証
 const resolvedTargetPath = resolve(config.project.targetPath);
 if (!existsSync(resolvedTargetPath)) {
   console.warn(`Target project path does not exist: ${resolvedTargetPath}`);
   console.warn('Please ensure TARGET_PROJECT_PATH points to a valid directory');
 }
 
-// Prompts directory validation and creation
+// プロンプトディレクトリの検証と作成
 const resolvedPromptsPath = resolve(config.prompts.dir);
 if (!existsSync(resolvedPromptsPath)) {
   console.warn(`Prompts directory does not exist: ${resolvedPromptsPath}`);
@@ -76,7 +76,7 @@ if (!existsSync(resolvedPromptsPath)) {
   }
 }
 
-// Claude CLI validation
+// Claude CLIの検証
 if (config.claude.cliPath !== 'claude') {
   if (!existsSync(config.claude.cliPath)) {
     console.warn(`Claude CLI path does not exist: ${config.claude.cliPath}`);
@@ -84,13 +84,13 @@ if (config.claude.cliPath !== 'claude') {
   }
 }
 
-// Daily token limit validation
+// 日次トークン制限の検証
 if (config.claude.dailyTokenLimit <= 0) {
   console.warn('DAILY_TOKEN_LIMIT should be a positive number. Using default: 45000');
   config.claude.dailyTokenLimit = 45000;
 }
 
-// Export resolved paths for use in other modules
+// 他のモジュールで使用するために解決したパスをエクスポート
 export const resolvedPaths = {
   targetProject: resolve(config.project.targetPath),
   claudeBot: resolve(config.project.claudeBotPath),

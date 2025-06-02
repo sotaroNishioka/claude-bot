@@ -18,25 +18,25 @@ export class ClaudeProcessor {
 
   async processMention(mention: MentionEvent): Promise<void> {
     try {
-      logger.info('Processing mention', {
+      logger.info('メンションを処理中', {
         type: mention.type,
         id: mention.id,
         user: mention.user,
       });
 
-      // Validate target project exists
+      // ターゲットプロジェクトの存在を検証
       if (!this.validateTargetProject()) {
         await this.respondWithError(mention, 'Target project directory not found');
         return;
       }
 
-      // Check Claude API availability
+      // Claude APIの利用可能性を確認
       if (!config.claude.apiKey) {
         await this.respondWithError(mention, 'Claude API key not configured');
         return;
       }
 
-      // Load prompt and execute Claude
+      // プロンプトを読み込み、Claudeを実行
       const prompt = this.loadPrompt(mention);
       const result = await this.executeClaudeCommand(prompt);
 
@@ -46,12 +46,12 @@ export class ClaudeProcessor {
         await this.respondWithError(mention, result.error || 'Claude execution failed');
       }
 
-      logger.info('Mention processed successfully', {
+      logger.info('メンションの処理が成功しました', {
         type: mention.type,
         id: mention.id,
       });
     } catch (error) {
-      logger.error('Error processing mention', { error, mention });
+      logger.error('メンションの処理エラー', { error, mention });
       await this.respondWithError(mention, `Processing failed: ${error}`);
     }
   }
@@ -68,7 +68,7 @@ export class ClaudeProcessor {
       const template = readFileSync(promptPath, 'utf-8');
       return template.replace('{{USER_REQUEST}}', mention.content);
     } catch (_error) {
-      logger.warn(`Prompt file not found: ${promptFile}, using direct content`);
+      logger.warn(`プロンプトファイルが見つかりません: ${promptFile}, 直接コンテンツを使用します`);
       return mention.content;
     }
   }
@@ -77,7 +77,7 @@ export class ClaudeProcessor {
     prompt: string
   ): Promise<{ success: boolean; error?: string }> {
     return new Promise((resolve) => {
-      logger.debug('Executing Claude CLI', {
+      logger.debug('Claude CLIを実行中', {
         cwd: resolvedPaths.targetProject,
         claudeCliPath: config.claude.cliPath,
       });
@@ -101,12 +101,12 @@ export class ClaudeProcessor {
 
       let stderr = '';
 
-      // Send prompt to stdin
+      // プロンプトをstdinに送信
       childProcess.stdin.write(prompt);
       childProcess.stdin.end();
 
       childProcess.stdout.on('data', (_data) => {
-        // Output is captured but not used in current implementation
+        // 現在の実装では出力をキャプチャするが使用していない
       });
 
       childProcess.stderr.on('data', (data) => {
@@ -115,12 +115,12 @@ export class ClaudeProcessor {
 
       childProcess.on('close', (code) => {
         if (code === 0) {
-          logger.debug('Claude CLI succeeded');
+          logger.debug('Claude CLIが成功しました');
           resolve({ success: true });
         } else {
-          logger.error('Claude CLI failed', { code, stderr });
+          logger.error('Claude CLIが失敗しました', { code, stderr });
 
-          // Handle permission errors
+          // 権限エラーを処理
           if (stderr.includes('permission')) {
             resolve({
               success: false,
@@ -133,7 +133,7 @@ export class ClaudeProcessor {
       });
 
       childProcess.on('error', (error) => {
-        logger.error('Failed to spawn Claude CLI', { error });
+        logger.error('Claude CLIの起動に失敗しました', { error });
 
         if (error.message.includes('ENOENT')) {
           resolve({
@@ -145,7 +145,7 @@ export class ClaudeProcessor {
         }
       });
 
-      // 5 minute timeout
+      // 5分タイムアウト
       setTimeout(() => {
         childProcess.kill('SIGTERM');
         resolve({ success: false, error: 'Command timeout (5 minutes)' });
@@ -179,7 +179,7 @@ export class ClaudeProcessor {
         await this.githubClient.addIssueComment(targetNumber, message);
       }
     } catch (error) {
-      logger.error('Failed to add comment', { error, targetNumber });
+      logger.error('コメントの追加に失敗しました', { error, targetNumber });
     }
   }
 }
