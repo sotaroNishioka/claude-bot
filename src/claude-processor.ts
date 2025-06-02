@@ -99,15 +99,14 @@ export class ClaudeProcessor {
         },
       });
 
-      let _stdout = '';
       let stderr = '';
 
       // Send prompt to stdin
       childProcess.stdin.write(prompt);
       childProcess.stdin.end();
 
-      childProcess.stdout.on('data', (data) => {
-        _stdout += data.toString();
+      childProcess.stdout.on('data', (_data) => {
+        // Output is captured but not used in current implementation
       });
 
       childProcess.stderr.on('data', (data) => {

@@ -118,9 +118,8 @@ export class MentionDetector {
       // Check PR comments
       const prComments = await this.githubClient.getPullRequestCommentsSince(sinceTime);
       for (const comment of prComments) {
-        const prNumber = this.githubClient.extractPullRequestNumber(
-          comment.issue_url.replace('/issues/', '/pulls/')
-        );
+        // For PR comments, the issue_url already points to the correct resource
+        const prNumber = this.githubClient.extractIssueNumber(comment.issue_url);
         const hasChanged = await this.tracker.isContentChanged(
           'pr_comment',
           comment.id,

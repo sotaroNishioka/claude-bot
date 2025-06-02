@@ -4,7 +4,7 @@ TypeScript implementation of Claude Code mention detection and automation system
 
 ## 🎯 Purpose
 
-Claude Bot monitors GitHub repositories for `@claude` mentions and automatically executes Claude Code CLI commands on your local project directory. Perfect for:
+Claude Bot monitors GitHub repositories for `@claude` or `@claude-code` mentions and automatically executes Claude Code CLI commands on your local project directory. Perfect for:
 
 - **Raspberry Pi automation**: Always-on monitoring with minimal resource usage
 - **Local development**: Claude Code works directly on your local project files
@@ -19,7 +19,9 @@ Claude Bot monitors GitHub repositories for `@claude` mentions and automatically
 │   ├── src/
 │   ├── package.json
 │   ├── .env               # Configuration
-│   └── mention_tracker.db
+│   ├── mention_tracker.db # SQLite database
+│   ├── prompts/           # Custom prompt templates
+│   └── logs/              # Application logs
 └── target-project/        # Your project - Claude Code execution target
     ├── src/
     ├── README.md
@@ -29,17 +31,30 @@ Claude Bot monitors GitHub repositories for `@claude` mentions and automatically
 
 ## ✨ Features
 
-- **Smart Mention Detection**: Automatically detects `@claude` mentions in GitHub Issues and PRs
+### Core Features
+- **Smart Mention Detection**: Automatically detects configurable mention patterns in GitHub Issues and PRs
 - **Local Project Execution**: Claude Code CLI runs in your specified target project directory
 - **Configurable CLI Path**: Support for Nodenv, NVM, and custom Claude CLI installations
 - **Token Optimization**: Efficient change detection using SHA256 hashing to minimize Claude Code API usage
-- **SQLite Database**: Reliable tracking of processed content and mention history
-- **Comprehensive Logging**: Detailed logging with Winston for monitoring and debugging
-- **Cron Scheduling**: Configurable intervals for detection and backup operations
-- **Type Safety**: Full TypeScript implementation with strict typing
+- **SQLite Database**: Reliable tracking of processed content and mention history with automatic backups
 
-- **Multi-Command Support**: Various Claude Code commands (implement, review, analyze, etc.)
+### Monitoring & Logging
+- **Comprehensive Logging**: Detailed logging with Winston for monitoring and debugging
+- **Multiple Log Levels**: Configurable logging (debug, info, warn, error) with file rotation
+- **Statistics Tracking**: Daily stats for checks, mentions, API calls, and token usage
+- **Database Backups**: Automated daily backups with 7-day retention policy
+
+### Scheduling & Automation
+- **Cron Scheduling**: Configurable intervals for detection and backup operations
 - **Graceful Error Handling**: Robust error handling and recovery mechanisms
+- **Auto-response Control**: Optional automatic responses to mentions
+- **Process Management**: Graceful shutdown handling and daemon mode support
+
+### Development Features
+- **Type Safety**: Full TypeScript implementation with strict typing
+- **Multiple Commands**: Various Claude Code commands (start, run-once, status, setup, test-config)
+- **Environment Detection**: Separate behavior for development and production modes
+- **Custom Prompts**: Template-based prompt system for different mention types
 
 ## 🚀 Quick Start
 
@@ -72,12 +87,12 @@ cp .env.example .env
 Edit `.env` with your settings:
 
 ```env
-# GitHub Configuration
+# GitHub Configuration (Required)
 GITHUB_TOKEN=ghp_your_personal_access_token
 GITHUB_OWNER=your_username  
 GITHUB_REPO=your_repository_name
 
-# Claude Code Configuration
+# Claude Code Configuration (Required)
 CLAUDE_API_KEY=your_claude_api_key
 CLAUDE_CLI_PATH=/usr/local/bin/claude  # or custom path
 DAILY_TOKEN_LIMIT=45000
@@ -86,8 +101,24 @@ DAILY_TOKEN_LIMIT=45000
 TARGET_PROJECT_PATH=../target-project
 CLAUDE_BOT_PATH=/home/pi/Develop/claude-bot
 
-# Detection Settings
+# Mention Detection Settings
+MENTION_PATTERNS=@claude,@claude-code  # Comma-separated patterns
+ENABLE_AUTO_RESPONSE=true
+
+# Scheduling (Cron expressions)
 DETECTION_INTERVAL="*/5 * * * *"  # Every 5 minutes
+BACKUP_INTERVAL="0 2 * * *"       # Daily at 2 AM
+
+# Logging
+LOG_LEVEL=info
+LOG_FILE=./logs/claude-bot.log
+
+# Database
+DATABASE_PATH=./mention_tracker.db
+
+# Environment
+ENVIRONMENT=production  # or development
+DEBUG=false
 ```
 
 ### 3. Claude CLI Path Configuration
@@ -127,34 +158,71 @@ npm run build && npm start
 
 # Single detection cycle (testing)
 npm run dev -- run-once
+
+# Daemon mode
+npm run daemon
 ```
 
 ## 📖 Usage
 
-Once running, Claude Bot will automatically detect `@claude` mentions in:
+### Available CLI Commands
 
-- ✅ Issue descriptions
-- ✅ Issue comments  
-- ✅ Pull Request descriptions
-- ✅ Pull Request comments
+| Command | Description | Usage |
+|---------|-------------|-------|
+| `start` | Start the Claude Bot daemon | `npm run dev -- start [--daemon]` |
+| `run-once` | Run a single detection cycle | `npm run dev -- run-once` |
+| `status` | Show current status and statistics | `npm run dev -- status` |
+| `setup` | Setup database and test connections | `npm run setup` |
+| `test-config` | Test configuration and connections | `npm run dev -- test-config` |
 
-### Available Commands
+### Mention Detection
 
-| Command | Description | Example |
-|---------|-------------|---------|
-| `@claude implement [details]` | Implement the issue/PR in target project | `@claude implement with error handling` |
-| `@claude review [focus]` | Code review with specific focus | `@claude review security and performance` |
-| `@claude analyze [aspect]` | Analyze code or requirements | `@claude analyze architecture patterns` |
-| `@claude improve [area]` | Suggest improvements | `@claude improve error handling` |
-| `@claude test [type]` | Generate tests | `@claude test unit tests for edge cases` |
-| `@claude help` | Show help message | `@claude help` |
+Claude Bot automatically monitors for mentions in:
+
+- ✅ **Issue descriptions** - When issues are created or updated
+- ✅ **Issue comments** - All comments on issues
+- ✅ **Pull Request descriptions** - When PRs are created or updated
+- ✅ **Pull Request comments** - All comments and review comments on PRs
+
+### Mention Patterns
+
+Configure custom mention patterns via `MENTION_PATTERNS`:
+
+```env
+# Default patterns
+MENTION_PATTERNS=@claude,@claude-code
+
+# Custom patterns
+MENTION_PATTERNS=@ai,@assistant,@bot
+
+# Single pattern
+MENTION_PATTERNS=@claude
+```
+
+### Prompt Templates
+
+Create custom prompt templates in the `prompts/` directory:
+
+- `issue.txt` - Template for issue mentions
+- `issue_comment.txt` - Template for issue comment mentions
+- `pr.txt` - Template for pull request mentions
+- `pr_comment.txt` - Template for PR comment mentions
+
+Template example (`prompts/issue.txt`):
+```
+You are helping with a GitHub issue. Please analyze and respond to the following request:
+
+{{USER_REQUEST}}
+
+Execute appropriate Claude Code commands to address this issue in the target project.
+```
 
 ### Example Mentions
 
 ```
 @claude implement this authentication feature with JWT tokens and proper error handling
 
-@claude review this PR, especially looking at memory usage and potential security vulnerabilities
+@claude-code review this PR, especially looking at memory usage and potential security vulnerabilities
 
 @claude analyze the current database schema and suggest performance improvements
 ```
@@ -165,26 +233,67 @@ Once running, Claude Bot will automatically detect `@claude` mentions in:
 
 ### Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `GITHUB_TOKEN` | GitHub Personal Access Token | **Required** |
-| `GITHUB_OWNER` | Repository owner username | **Required** |
-| `GITHUB_REPO` | Repository name | **Required** |
-| `CLAUDE_API_KEY` | Claude API key for Claude Code | **Required** |
-| `CLAUDE_CLI_PATH` | Path to Claude CLI executable | `claude` |
-| `TARGET_PROJECT_PATH` | Path to target project directory | `../target-project` |
-| `CLAUDE_BOT_PATH` | Path to Claude Bot directory | `current directory` |
-| `DAILY_TOKEN_LIMIT` | Maximum Claude tokens per day | `45000` |
-| `DETECTION_INTERVAL` | Cron expression for mention detection | `*/5 * * * *` |
-| `BACKUP_INTERVAL` | Cron expression for database backup | `0 2 * * *` |
-| `LOG_LEVEL` | Logging level (debug, info, warn, error) | `info` |
-| `DATABASE_PATH` | SQLite database file path | `./mention_tracker.db` |
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `GITHUB_TOKEN` | GitHub Personal Access Token | - | ✅ |
+| `GITHUB_OWNER` | Repository owner username | - | ✅ |
+| `GITHUB_REPO` | Repository name | - | ✅ |
+| `CLAUDE_API_KEY` | Claude API key for Claude Code | - | ✅ |
+| `CLAUDE_CLI_PATH` | Path to Claude CLI executable | `claude` | ❌ |
+| `TARGET_PROJECT_PATH` | Path to target project directory | `../target-project` | ❌ |
+| `CLAUDE_BOT_PATH` | Path to Claude Bot directory | `current directory` | ❌ |
+| `DAILY_TOKEN_LIMIT` | Maximum Claude tokens per day | `45000` | ❌ |
+| `MENTION_PATTERNS` | Comma-separated mention patterns | `@claude,@claude-code` | ❌ |
+| `ENABLE_AUTO_RESPONSE` | Enable automatic responses | `false` | ❌ |
+| `DETECTION_INTERVAL` | Cron expression for mention detection | `*/5 * * * *` | ❌ |
+| `BACKUP_INTERVAL` | Cron expression for database backup | `0 2 * * *` | ❌ |
+| `LOG_LEVEL` | Logging level | `info` | ❌ |
+| `LOG_FILE` | Log file path | `./logs/claude-bot.log` | ❌ |
+| `DATABASE_PATH` | SQLite database file path | `./mention_tracker.db` | ❌ |
+| `ENVIRONMENT` | Environment mode | `production` | ❌ |
+| `DEBUG` | Enable debug mode | `false` | ❌ |
+| `PROMPTS_DIR` | Custom prompts directory | `./prompts` | ❌ |
 
 ### GitHub Token Permissions
 
 Required permissions for GitHub Personal Access Token:
-- `repo` (Full repository access)
-- `read:org` (Read organization membership)
+- `repo` (Full repository access) - For reading issues/PRs and posting comments
+- `read:org` (Read organization membership) - For organization repositories
+
+### Claude Code CLI Arguments
+
+The bot executes Claude Code with these arguments:
+- `--output-format stream-json` - Structured output format
+- `--print` - Print output to stdout
+- `--dangerously-skip-permissions` - Skip permission prompts
+- `--verbose` - Detailed logging
+
+Timeout: 5 minutes per execution
+
+## 📊 Database Schema
+
+### Tables
+
+**tracked_items** - Content change tracking
+- `id` (PRIMARY KEY)
+- `item_type` (issue, pr, issue_comment, pr_comment)
+- `item_id` (GitHub item ID)
+- `parent_id` (Issue/PR number for comments)
+- `content_hash` (SHA256 of content)
+- `has_mention` (Boolean)
+- `last_checked`, `created_at`, `updated_at`
+
+**mention_history** - Mention processing log
+- `id` (PRIMARY KEY)
+- `item_type`, `item_id`, `parent_id`
+- `user_login` (GitHub username)
+- `mention_content` (Full content with mention)
+- `detected_at`, `processed`, `processed_at`
+
+**processing_stats** - Daily statistics
+- `date` (PRIMARY KEY)
+- `total_checks`, `new_mentions`, `processed_mentions`
+- `api_calls`, `tokens_used`
 
 ## 📳 Deployment Options
 
@@ -216,6 +325,18 @@ pm2 startup
 pm2 save
 ```
 
+The PM2 configuration includes:
+- Memory limit: 1GB with auto-restart
+- Log files: `./logs/pm2-*.log`
+- Production environment variables
+
+### Manual Daemon Mode
+
+```bash
+npm run build
+nohup npm start > /dev/null 2>&1 &
+```
+
 ## 📊 Monitoring
 
 ### Status Check
@@ -230,18 +351,24 @@ Output example:
   "isRunning": true,
   "repository": {
     "name": "my-project",
+    "fullName": "user/my-project",
     "language": "TypeScript",
-    "stars": 42
+    "stars": 42,
+    "forks": 8
   },
   "todayStats": {
+    "date": "2024-01-15",
     "totalChecks": 288,
     "newMentions": 5,
     "processedMentions": 5,
+    "apiCalls": 12,
     "tokensUsed": 12500
   },
   "configuration": {
-    "targetProject": "/home/pi/Develop/target-project",
-    "claudeCli": "/home/pi/.nodenv/shims/claude"
+    "detectionInterval": "*/5 * * * *",
+    "backupInterval": "0 2 * * *",
+    "dailyTokenLimit": 45000,
+    "mentionPatterns": ["@claude", "@claude-code"]
   }
 }
 ```
@@ -253,31 +380,48 @@ Output example:
 tail -f ./logs/claude-bot.log
 
 # View error logs only
-grep ERROR ./logs/claude-bot.log
+tail -f ./logs/claude-bot-error.log
+
+# View exception logs
+tail -f ./logs/claude-bot-exceptions.log
+
+# View PM2 logs (if using PM2)
+tail -f ./logs/pm2-combined.log
 
 # View today's mention activity
 grep "mention detected" ./logs/claude-bot.log | grep $(date +%Y-%m-%d)
 ```
 
+### Log Rotation
+
+Automatic log rotation is configured:
+- Main log: 10MB max, 5 files retained
+- Error log: 10MB max, 3 files retained
+- Exception log: Unlimited size
+
 ## 🎯 Token Optimization
 
 Claude Bot is designed for efficient token usage:
 
-- **Change Detection**: Only processes content that has actually changed
-- **Content Hashing**: SHA256 comparison prevents duplicate processing  
+### Smart Processing
+- **Change Detection**: Only processes content that has actually changed (SHA256 comparison)
+- **Content Hashing**: Prevents duplicate processing of same content
 - **Daily Limits**: Configurable token budgets with automatic enforcement
-- **Smart Scheduling**: Non-critical tasks run during low-usage hours
+- **Sequential Processing**: 2-second delays between mentions to respect rate limits
+
+### Database Efficiency
+- **Incremental Checks**: Only fetches GitHub data since last check time
+- **Mention Tracking**: Tracks processing status to avoid duplicate work
+- **Backup Management**: Automated daily backups with 7-day cleanup
 
 ### Token Usage Estimates
 
-| Action | Estimated Tokens | Description |
-|--------|------------------|-------------|
-| `implement` | 3000-8000 | Code generation and PR creation |
-| `review` | 1500-3000 | Code analysis and feedback |
-| `analyze` | 1000-2000 | Requirements and architecture analysis |
-| `improve` | 2000-2500 | Optimization suggestions |
-| `test` | 1500-2000 | Test generation |
-| `help` | 0 | Static response |
+| Action Type | Estimated Tokens | Notes |
+|-------------|------------------|-------|
+| Simple mention | 1000-3000 | Basic requests and responses |
+| Code implementation | 3000-8000 | Code generation and file modifications |
+| Code review | 1500-3000 | Analysis and feedback |
+| Architecture analysis | 2000-4000 | Complex reasoning tasks |
 
 ## 🔍 Troubleshooting
 
@@ -285,6 +429,9 @@ Claude Bot is designed for efficient token usage:
 
 1. **Claude CLI not found**:
    ```bash
+   # Test Claude CLI path
+   npm run dev -- test-config
+   
    # Check if Claude CLI is installed
    which claude
    
@@ -295,10 +442,10 @@ Claude Bot is designed for efficient token usage:
 2. **Target project not found**:
    ```bash
    # Verify target project exists
-   ls -la ../target-project
+   ls -la $TARGET_PROJECT_PATH
    
-   # Update TARGET_PROJECT_PATH in .env
-   TARGET_PROJECT_PATH=/full/path/to/target-project
+   # Check configuration
+   npm run dev -- test-config
    ```
 
 3. **Permission issues**:
@@ -310,12 +457,54 @@ Claude Bot is designed for efficient token usage:
    cd ../target-project && git status
    ```
 
+4. **Database issues**:
+   ```bash
+   # Reset database
+   rm mention_tracker.db
+   npm run setup
+   ```
+
+5. **GitHub API rate limiting**:
+   - Default: 5000 requests/hour for authenticated requests
+   - The bot uses 1 API call per detection cycle
+   - With 5-minute intervals: 12 calls/hour (well within limits)
+
 ### Debug Mode
 
 ```bash
 # Enable debug logging
 DEBUG=true LOG_LEVEL=debug npm run dev -- start
+
+# Test single cycle with debug
+DEBUG=true LOG_LEVEL=debug npm run dev -- run-once
 ```
+
+### Error Responses
+
+The bot provides detailed error messages in GitHub comments:
+
+```
+❌ @username Error message here
+
+**Debug Info:**
+- Target Project: `/path/to/target-project`
+- Claude CLI: `/path/to/claude`
+```
+
+Success responses:
+
+```
+✅ @username Claude Code execution completed.
+
+**Target Project:** `/path/to/target-project`
+```
+
+## 🔒 Security Considerations
+
+- **API Keys**: Store in `.env` file, never commit to git
+- **File System**: Claude Code has full access to target project directory
+- **GitHub Permissions**: Bot can read all repository content and post comments
+- **Process Isolation**: Claude CLI runs in target project directory with inherited environment
 
 ## 📚 Documentation
 
@@ -339,6 +528,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Octokit](https://github.com/octokit/octokit.js) - GitHub API client
 - [Winston](https://github.com/winstonjs/winston) - Logging library
 - [node-cron](https://github.com/node-cron/node-cron) - Task scheduling
+- [SQLite](https://www.sqlite.org/) - Embedded database
 
 ---
 

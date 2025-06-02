@@ -105,13 +105,13 @@ export class MentionTracker {
 
       if (!existing) {
         // New item
-        await this.recordItem(itemType, itemId, contentHash, content.includes('@claude'), parentId);
+        await this.recordItem(itemType, itemId, contentHash, this.containsMention(content), parentId);
         return true;
       }
 
       if (existing.contentHash !== contentHash) {
         // Content changed
-        await this.updateItem(itemType, itemId, contentHash, content.includes('@claude'));
+        await this.updateItem(itemType, itemId, contentHash, this.containsMention(content));
         return true;
       }
 
@@ -245,6 +245,14 @@ export class MentionTracker {
       await this.db.close();
       logger.info('Database connection closed');
     }
+  }
+
+  private containsMention(content: string): boolean {
+    if (!content) return false;
+    const { config } = require('./config');
+    return config.mention.patterns.some((pattern: string) =>
+      content.toLowerCase().includes(pattern.toLowerCase())
+    );
   }
 
   async backup(backupPath: string): Promise<void> {
