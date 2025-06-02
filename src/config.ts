@@ -22,10 +22,10 @@ export const config: Config = {
   },
   prompts: {
     dir: process.env.PROMPTS_DIR || './prompts',
-    defaultIssuePrompt: process.env.DEFAULT_ISSUE_PROMPT || 'issue_handler.txt',
-    defaultIssueCommentPrompt: process.env.DEFAULT_ISSUE_COMMENT_PROMPT || 'issue_comment_handler.txt',
-    defaultPrPrompt: process.env.DEFAULT_PR_PROMPT || 'pr_handler.txt',
-    defaultPrCommentPrompt: process.env.DEFAULT_PR_COMMENT_PROMPT || 'pr_comment_handler.txt',
+    issueMention: process.env.ISSUE_MENTION_PROMPT || 'issue_mention.txt',
+    issueComment: process.env.ISSUE_COMMENT_PROMPT || 'issue_comment.txt',
+    prMention: process.env.PR_MENTION_PROMPT || 'pr_mention.txt',
+    prComment: process.env.PR_COMMENT_PROMPT || 'pr_comment.txt',
   },
   database: {
     path: process.env.DATABASE_PATH || './mention_tracker.db',

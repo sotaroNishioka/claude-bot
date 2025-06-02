@@ -106,10 +106,10 @@ export interface Config {
   };
   prompts: {
     dir: string;
-    defaultIssuePrompt: string;
-    defaultIssueCommentPrompt: string;
-    defaultPrPrompt: string;
-    defaultPrCommentPrompt: string;
+    issueMention: string;
+    issueComment: string;
+    prMention: string;
+    prComment: string;
   };
   database: {
     path: string;
