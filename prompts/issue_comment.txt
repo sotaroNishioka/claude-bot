@@ -1,7 +1,13 @@
 GitHub Issue のコメントに対応します。
 
-## コメント内容
+## 要求内容
 {{USER_REQUEST}}
+
+## コンテキスト情報
+- **コメント URL**: {{CONTEXT_URL}}
+- **関連 Issue**: {{CONTEXT_TITLE}}
+- **リクエスト者**: {{USER_NAME}}
+- **リポジトリ**: {{REPOSITORY}}
 
 ## 実行指針
 - プロジェクトのCLAUDE.mdルールを把握
@@ -18,6 +24,7 @@ GitHub Issue のコメントに対応します。
 ```
 🤖 **ClaudeCode**
 **タイムスタンプ**: [YYYY-MM-DD HH:mm:ss UTC]
+**コメント**: {{CONTEXT_URL}}
 **作業予定**: 
 {ここに作業計画を記述}
 ```
@@ -25,6 +32,7 @@ GitHub Issue のコメントに対応します。
 ```
 🤖 **ClaudeCode**
 **タイムスタンプ**: [YYYY-MM-DD HH:mm:ss UTC]
+**コメント**: {{CONTEXT_URL}}
 **作業内容**: 
 {ここに作業内容を記述}
 ```

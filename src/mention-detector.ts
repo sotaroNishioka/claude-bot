@@ -48,6 +48,7 @@ export class MentionDetector {
           issue.body || ''
         );
         if (hasChanged && this.containsMention(issue.body || '')) {
+          const issueUrl = `https://github.com/${config.github.owner}/${config.github.repo}/issues/${issue.number}`;
           mentions.push({
             type: 'issue',
             id: issue.number,
@@ -55,6 +56,8 @@ export class MentionDetector {
             user: issue.user.login,
             detectedAt: new Date(),
             processed: false,
+            url: issueUrl,
+            title: issue.title,
           });
 
           await this.tracker.recordMention(
@@ -77,6 +80,8 @@ export class MentionDetector {
           issueNumber
         );
         if (hasChanged && this.containsMention(comment.body)) {
+          const issueUrl = `https://github.com/${config.github.owner}/${config.github.repo}/issues/${issueNumber}`;
+          const commentUrl = `${issueUrl}#issuecomment-${comment.id}`;
           mentions.push({
             type: 'issue_comment',
             id: comment.id,
@@ -85,6 +90,8 @@ export class MentionDetector {
             user: comment.user.login,
             detectedAt: new Date(),
             processed: false,
+            url: commentUrl,
+            title: `Issue #${issueNumber} Comment`,
           });
 
           await this.tracker.recordMention(
@@ -102,6 +109,7 @@ export class MentionDetector {
       for (const pr of prs) {
         const hasChanged = await this.tracker.isContentChanged('pr', pr.number, pr.body || '');
         if (hasChanged && this.containsMention(pr.body || '')) {
+          const prUrl = `https://github.com/${config.github.owner}/${config.github.repo}/pull/${pr.number}`;
           mentions.push({
             type: 'pr',
             id: pr.number,
@@ -109,6 +117,8 @@ export class MentionDetector {
             user: pr.user.login,
             detectedAt: new Date(),
             processed: false,
+            url: prUrl,
+            title: pr.title,
           });
 
           await this.tracker.recordMention('pr', pr.number, pr.user.login, pr.body || '');
@@ -127,6 +137,8 @@ export class MentionDetector {
           prNumber
         );
         if (hasChanged && this.containsMention(comment.body)) {
+          const prUrl = `https://github.com/${config.github.owner}/${config.github.repo}/pull/${prNumber}`;
+          const commentUrl = `${prUrl}#issuecomment-${comment.id}`;
           mentions.push({
             type: 'pr_comment',
             id: comment.id,
@@ -135,6 +147,8 @@ export class MentionDetector {
             user: comment.user.login,
             detectedAt: new Date(),
             processed: false,
+            url: commentUrl,
+            title: `Pull Request #${prNumber} Comment`,
           });
 
           await this.tracker.recordMention(

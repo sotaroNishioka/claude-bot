@@ -54,6 +54,8 @@ export interface MentionEvent {
   user: string;
   detectedAt: Date;
   processed: boolean;
+  url?: string; // GitHub URL for context
+  title?: string; // Issue/PR title for context
 }
 
 export interface TrackedItem {

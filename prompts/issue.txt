@@ -3,6 +3,12 @@ GitHub Issue の実装をサポートします。
 ## 要求内容
 {{USER_REQUEST}}
 
+## コンテキスト情報
+- **Issue URL**: {{CONTEXT_URL}}
+- **Issue タイトル**: {{CONTEXT_TITLE}}
+- **リクエスト者**: {{USER_NAME}}
+- **リポジトリ**: {{REPOSITORY}}
+
 ## 実行指針
 - プロジェクトのCLAUDE.mdルールを把握
 - Issue の詳細を理解し、適切な実装を行ってください
@@ -17,6 +23,7 @@ GitHub Issue の実装をサポートします。
 ```
 🤖 **ClaudeCode**
 **タイムスタンプ**: [YYYY-MM-DD HH:mm:ss UTC]
+**Issue**: {{CONTEXT_URL}}
 **作業予定**: 
 {ここに作業計画を記述}
 ```
@@ -24,6 +31,7 @@ GitHub Issue の実装をサポートします。
 ```
 🤖 **ClaudeCode**
 **タイムスタンプ**: [YYYY-MM-DD HH:mm:ss UTC]
+**Issue**: {{CONTEXT_URL}}
 **作業内容**: 
 {ここに作業内容を記述}
 ```

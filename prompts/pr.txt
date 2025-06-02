@@ -3,6 +3,12 @@ GitHub Pull Request のレビューと改善をサポートします。
 ## PR 内容
 {{USER_REQUEST}}
 
+## コンテキスト情報
+- **Pull Request URL**: {{CONTEXT_URL}}
+- **PR タイトル**: {{CONTEXT_TITLE}}
+- **リクエスト者**: {{USER_NAME}}
+- **リポジトリ**: {{REPOSITORY}}
+
 ## 実行指針
 - プロジェクトのCLAUDE.mdルールを把握
 - PR の変更内容を確認し、コードレビューを実施
@@ -19,6 +25,7 @@ GitHub Pull Request のレビューと改善をサポートします。
 ```
 🤖 **ClaudeCode**
 **タイムスタンプ**: [YYYY-MM-DD HH:mm:ss UTC]
+**Pull Request**: {{CONTEXT_URL}}
 **作業予定**: 
 {ここに作業計画を記述}
 ```
@@ -26,6 +33,7 @@ GitHub Pull Request のレビューと改善をサポートします。
 ```
 🤖 **ClaudeCode**
 **タイムスタンプ**: [YYYY-MM-DD HH:mm:ss UTC]
+**Pull Request**: {{CONTEXT_URL}}
 **作業内容**: 
 {ここに作業内容を記述}
 ```

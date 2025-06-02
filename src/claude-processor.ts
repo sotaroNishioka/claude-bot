@@ -91,16 +91,17 @@ export class ClaudeProcessor {
   }
 
   private loadPrompt(mention: MentionEvent): string {
-    const promptFile = `${mention.type}.txt`;
-    const promptPath = resolve(resolvedPaths.prompts, promptFile);
-
-    try {
-      const template = readFileSync(promptPath, 'utf-8');
-      return template.replace('{{USER_REQUEST}}', mention.content);
-    } catch (_error) {
-      logger.warn(`プロンプトファイルが見つかりません: ${promptFile}, 直接コンテンツを使用します`);
-      return mention.content;
-    }
+    const { PromptManager } = require('./prompt-manager');
+    const promptManager = new PromptManager();
+    const promptFile = promptManager.getPromptFileForMentionType(mention.type);
+    
+    return promptManager.loadAndProcessPrompt(
+      promptFile,
+      mention.content,
+      mention.url,
+      mention.title,
+      mention.user
+    );
   }
 
   private async executeClaudeCommand(
