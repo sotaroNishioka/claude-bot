@@ -2,19 +2,22 @@ import { spawn } from 'child_process';
 import { MentionEvent, ClaudeCommand } from './types';
 import { GitHubClient } from './github-client';
 import { MentionTracker } from './database';
+import { PromptManager } from './prompt-manager';
 import { logger } from './logger';
 import { config, resolvedPaths } from './config';
-import { existsSync } from 'fs';
+import { existsSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 
 export class ClaudeProcessor {
   private githubClient: GitHubClient;
   private tracker: MentionTracker;
+  private promptManager: PromptManager;
   private dailyTokenUsage: number = 0;
 
   constructor(githubClient: GitHubClient, tracker: MentionTracker) {
     this.githubClient = githubClient;
     this.tracker = tracker;
+    this.promptManager = new PromptManager();
   }
 
   async processMention(mention: MentionEvent): Promise<void> {
@@ -41,8 +44,8 @@ export class ClaudeProcessor {
         return;
       }
 
-      // Execute the appropriate Claude Code command
-      await this.executeClaude(mention, command);
+      // Execute Claude CLI with prompt
+      await this.executeClaudeWithPrompt(mention, command);
       
       // Record token usage
       await this.recordTokenUsage(estimatedTokens);
@@ -113,7 +116,7 @@ export class ClaudeProcessor {
     };
   }
 
-  private async executeClaude(mention: MentionEvent, command: ClaudeCommand): Promise<void> {
+  private async executeClaudeWithPrompt(mention: MentionEvent, command: ClaudeCommand): Promise<void> {
     const isClaudeAvailable = !!config.claude.apiKey;
     
     if (!isClaudeAvailable) {
@@ -122,26 +125,29 @@ export class ClaudeProcessor {
     }
 
     try {
-      switch (command.action) {
-        case 'implement':
-          await this.executeImplementation(command);
-          break;
-        case 'review':
-          await this.executeReview(command);
-          break;
-        case 'analyze':
-          await this.executeAnalysis(command);
-          break;
-        case 'improve':
-          await this.executeImprovement(command);
-          break;
-        case 'test':
-          await this.executeTestGeneration(command);
-          break;
-        case 'help':
-        default:
-          await this.showHelp(mention);
-          break;
+      // Get appropriate prompt file for mention type
+      const promptFile = this.promptManager.getPromptFileForMentionType(mention.type);
+      
+      // Check if prompt exists
+      if (!this.promptManager.promptExists(promptFile)) {
+        logger.warn(`Prompt file not found: ${promptFile}, using default`);
+        await this.showHelp(mention);
+        return;
+      }
+
+      // Load and process prompt
+      const template = this.promptManager.loadPrompt(promptFile);
+      const promptVariables = await this.buildPromptVariables(mention, command);
+      const processedPrompt = this.promptManager.processPrompt(template, promptVariables);
+
+      // Execute Claude CLI with processed prompt
+      const result = await this.runClaudeCommand(processedPrompt);
+      
+      if (result.success) {
+        const responseMessage = `✅ @${command.user} Claude Code execution completed.\n\n**Working Directory:** \`${resolvedPaths.targetProject}\`\n**Prompt File:** \`${promptFile}\``;
+        await this.respondToMention(command, responseMessage);
+      } else {
+        throw new Error(`Claude execution failed: ${result.error}`);
       }
     } catch (error) {
       logger.error('Claude execution failed', { error, command });
@@ -149,163 +155,145 @@ export class ClaudeProcessor {
     }
   }
 
-  private async executeImplementation(command: ClaudeCommand): Promise<void> {
-    logger.info('Executing Claude Code implementation', {
-      target: command.target,
-      targetNumber: command.targetNumber,
-      parameters: command.parameters,
-      workingDirectory: resolvedPaths.targetProject,
-    });
+  private async buildPromptVariables(mention: MentionEvent, command: ClaudeCommand): Promise<Record<string, string>> {
+    const variables: Record<string, string> = {
+      USER_REQUEST: command.parameters || mention.content,
+      USER: command.user,
+      REPO_NAME: `${config.github.owner}/${config.github.repo}`,
+      PROJECT_PATH: resolvedPaths.targetProject,
+      MENTION_TYPE: mention.type,
+    };
 
-    const claudeCommand = [
-      config.claude.cliPath,
-      'code',
-      'implement',
-      `--${command.target}`,
-      command.targetNumber.toString(),
-    ];
-
-    if (command.parameters) {
-      claudeCommand.push('--description', command.parameters);
+    // Add issue/PR specific variables
+    if (mention.type.includes('issue')) {
+      try {
+        const issue = await this.githubClient.getIssueDetails(command.targetNumber);
+        variables.ISSUE_NUMBER = command.targetNumber.toString();
+        variables.ISSUE_TITLE = issue.title;
+        variables.ISSUE_BODY = issue.body || '';
+        variables.ISSUE_LABELS = issue.labels.map(l => l.name).join(', ');
+        variables.ISSUE_STATE = issue.state;
+      } catch (error) {
+        logger.warn('Failed to fetch issue details', { error, issueNumber: command.targetNumber });
+      }
+    } else if (mention.type.includes('pr')) {
+      try {
+        const pr = await this.githubClient.getPullRequestDetails(command.targetNumber);
+        variables.PR_NUMBER = command.targetNumber.toString();
+        variables.PR_TITLE = pr.title;
+        variables.PR_BODY = pr.body || '';
+        variables.PR_STATE = pr.state;
+        variables.PR_BASE_BRANCH = pr.base.ref;
+        variables.PR_HEAD_BRANCH = pr.head.ref;
+      } catch (error) {
+        logger.warn('Failed to fetch PR details', { error, prNumber: command.targetNumber });
+      }
     }
 
-    claudeCommand.push('--auto-pr');
-
-    const result = await this.runCommand(claudeCommand);
-    
-    if (result.success) {
-      const responseMessage = `✅ @${command.user} Implementation completed by Claude Code. Please check the created PR.\n\n**Working Directory:** \`${resolvedPaths.targetProject}\`\n**Command:** \`${claudeCommand.join(' ')}\``;
-      await this.respondToMention(command, responseMessage);
-    } else {
-      throw new Error(`Implementation failed: ${result.error}`);
-    }
+    return variables;
   }
 
-  private async executeReview(command: ClaudeCommand): Promise<void> {
-    logger.info('Executing Claude Code review', {
-      target: command.target,
-      targetNumber: command.targetNumber,
-      parameters: command.parameters,
-      workingDirectory: resolvedPaths.targetProject,
+  private async runClaudeCommand(prompt: string): Promise<{ success: boolean; error?: string }> {
+    return new Promise((resolve) => {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const logFile = resolve(resolvedPaths.claudeBot, 'logs', `claude_execution_${timestamp}.log`);
+      
+      logger.debug('Running Claude CLI command', { 
+        cwd: resolvedPaths.targetProject,
+        claudeCliPath: config.claude.cliPath,
+        logFile
+      });
+      
+      // Claude CLI コマンド（automation.sh の方式を参考）
+      const claudeArgs = [
+        '--output-format', 'stream-json',
+        '--print',
+        '--dangerously-skip-permissions',
+        '--verbose'
+      ];
+      
+      const process = spawn(config.claude.cliPath, claudeArgs, {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        cwd: resolvedPaths.targetProject, // 重要: target-project で実行
+        env: {
+          ...process.env,
+          // Claude API key を環境変数として渡す
+          CLAUDE_API_KEY: config.claude.apiKey,
+        },
+      });
+
+      let stdout = '';
+      let stderr = '';
+
+      // プロンプトを stdin に送信
+      process.stdin.write(prompt);
+      process.stdin.end();
+
+      process.stdout.on('data', (data) => {
+        const chunk = data.toString();
+        stdout += chunk;
+        // ログファイルにも出力（automation.sh の tee と同様）
+        try {
+          require('fs').appendFileSync(logFile, chunk);
+        } catch (error) {
+          logger.warn('Failed to write to log file', { error, logFile });
+        }
+      });
+
+      process.stderr.on('data', (data) => {
+        const chunk = data.toString();
+        stderr += chunk;
+        try {
+          require('fs').appendFileSync(logFile, `STDERR: ${chunk}`);
+        } catch (error) {
+          logger.warn('Failed to write stderr to log file', { error, logFile });
+        }
+      });
+
+      process.on('close', (code) => {
+        if (code === 0) {
+          logger.debug('Claude CLI command succeeded', { stdout: stdout.slice(0, 500) });
+          resolve({ success: true });
+        } else {
+          logger.error('Claude CLI command failed', { code, stderr, stdout: stdout.slice(0, 500) });
+          
+          // 権限エラーの特別処理（automation.sh を参考）
+          if (stderr.includes('permission') || stderr.includes('権限')) {
+            const permissionError = 'Permission error detected. Please run manually: claude --dangerously-skip-permissions';
+            resolve({ success: false, error: permissionError });
+          } else {
+            resolve({ success: false, error: stderr || `Exit code: ${code}` });
+          }
+        }
+      });
+
+      process.on('error', (error) => {
+        logger.error('Failed to spawn Claude CLI process', { 
+          error, 
+          command: config.claude.cliPath,
+          cwd: resolvedPaths.targetProject 
+        });
+        
+        // More specific error messages
+        if (error.message.includes('ENOENT')) {
+          const errorMsg = `Claude CLI not found at: ${config.claude.cliPath}. Please check CLAUDE_CLI_PATH setting.`;
+          resolve({ success: false, error: errorMsg });
+        } else {
+          resolve({ success: false, error: error.message });
+        }
+      });
+
+      // Set timeout for long-running commands (5 minutes)
+      setTimeout(() => {
+        process.kill('SIGTERM');
+        resolve({ success: false, error: 'Command timeout (5 minutes)' });
+      }, 300000);
     });
-
-    const claudeCommand = [
-      config.claude.cliPath,
-      'code',
-      'review',
-      `--${command.target}`,
-      command.targetNumber.toString(),
-    ];
-
-    if (command.parameters) {
-      claudeCommand.push('--focus', command.parameters);
-    }
-
-    claudeCommand.push('--detailed', '--security-check', '--performance-check');
-
-    const result = await this.runCommand(claudeCommand);
-    
-    if (result.success) {
-      const responseMessage = `✅ @${command.user} Code review completed by Claude Code. Check the comments for detailed feedback.\n\n**Working Directory:** \`${resolvedPaths.targetProject}\``;
-      await this.respondToMention(command, responseMessage);
-    } else {
-      throw new Error(`Review failed: ${result.error}`);
-    }
-  }
-
-  private async executeAnalysis(command: ClaudeCommand): Promise<void> {
-    logger.info('Executing Claude Code analysis', {
-      target: command.target,
-      targetNumber: command.targetNumber,
-      parameters: command.parameters,
-      workingDirectory: resolvedPaths.targetProject,
-    });
-
-    const claudeCommand = [
-      config.claude.cliPath,
-      'code',
-      'analyze',
-      `--${command.target}`,
-      command.targetNumber.toString(),
-    ];
-
-    if (command.parameters) {
-      claudeCommand.push('--focus', command.parameters);
-    }
-
-    const result = await this.runCommand(claudeCommand);
-    
-    if (result.success) {
-      const responseMessage = `✅ @${command.user} Analysis completed by Claude Code. Detailed insights have been generated.\n\n**Working Directory:** \`${resolvedPaths.targetProject}\``;
-      await this.respondToMention(command, responseMessage);
-    } else {
-      throw new Error(`Analysis failed: ${result.error}`);
-    }
-  }
-
-  private async executeImprovement(command: ClaudeCommand): Promise<void> {
-    logger.info('Executing Claude Code improvement', {
-      target: command.target,
-      targetNumber: command.targetNumber,
-      parameters: command.parameters,
-      workingDirectory: resolvedPaths.targetProject,
-    });
-
-    const claudeCommand = [
-      config.claude.cliPath,
-      'code',
-      'improve',
-      `--${command.target}`,
-      command.targetNumber.toString(),
-    ];
-
-    if (command.parameters) {
-      claudeCommand.push('--focus', command.parameters);
-    }
-
-    const result = await this.runCommand(claudeCommand);
-    
-    if (result.success) {
-      const responseMessage = `✅ @${command.user} Code improvement suggestions generated by Claude Code.\n\n**Working Directory:** \`${resolvedPaths.targetProject}\``;
-      await this.respondToMention(command, responseMessage);
-    } else {
-      throw new Error(`Improvement failed: ${result.error}`);
-    }
-  }
-
-  private async executeTestGeneration(command: ClaudeCommand): Promise<void> {
-    logger.info('Executing Claude Code test generation', {
-      target: command.target,
-      targetNumber: command.targetNumber,
-      parameters: command.parameters,
-      workingDirectory: resolvedPaths.targetProject,
-    });
-
-    const claudeCommand = [
-      config.claude.cliPath,
-      'code',
-      'test',
-      `--${command.target}`,
-      command.targetNumber.toString(),
-    ];
-
-    if (command.parameters) {
-      claudeCommand.push('--focus', command.parameters);
-    }
-
-    claudeCommand.push('--coverage', '--unit-tests');
-
-    const result = await this.runCommand(claudeCommand);
-    
-    if (result.success) {
-      const responseMessage = `✅ @${command.user} Test generation completed by Claude Code.\n\n**Working Directory:** \`${resolvedPaths.targetProject}\``;
-      await this.respondToMention(command, responseMessage);
-    } else {
-      throw new Error(`Test generation failed: ${result.error}`);
-    }
   }
 
   private async showHelp(mention: MentionEvent): Promise<void> {
+    const availablePrompts = this.promptManager.getAvailablePrompts();
+    
     const helpMessage = `📖 **Claude Code Usage**
 
 **Available Commands:**
@@ -323,6 +311,8 @@ export class ClaudeProcessor {
 **Project Information:**
 - **Target Project:** \`${resolvedPaths.targetProject}\`
 - **Claude CLI:** \`${config.claude.cliPath}\`
+- **Prompt File:** \`${this.promptManager.getPromptFileForMentionType(mention.type)}\`
+- **Available Prompts:** ${availablePrompts.join(', ')}
 
 ---
 *Powered by Claude Code - AI-driven development automation*`;
@@ -333,69 +323,6 @@ export class ClaudeProcessor {
     } else {
       await this.githubClient.addIssueComment(targetNumber, helpMessage);
     }
-  }
-
-  private async runCommand(command: string[]): Promise<{ success: boolean; error?: string }> {
-    return new Promise((resolve) => {
-      logger.debug('Running Claude Code command', { 
-        command, 
-        cwd: resolvedPaths.targetProject,
-        claudeCliPath: config.claude.cliPath 
-      });
-      
-      const process = spawn(command[0], command.slice(1), {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        cwd: resolvedPaths.targetProject, // 重要: target-project で実行
-        env: {
-          ...process.env,
-          // Claude API key を環境変数として渡す
-          CLAUDE_API_KEY: config.claude.apiKey,
-        },
-      });
-
-      let stdout = '';
-      let stderr = '';
-
-      process.stdout.on('data', (data) => {
-        stdout += data.toString();
-      });
-
-      process.stderr.on('data', (data) => {
-        stderr += data.toString();
-      });
-
-      process.on('close', (code) => {
-        if (code === 0) {
-          logger.debug('Claude Code command succeeded', { stdout });
-          resolve({ success: true });
-        } else {
-          logger.error('Claude Code command failed', { code, stderr, stdout });
-          resolve({ success: false, error: stderr || `Exit code: ${code}` });
-        }
-      });
-
-      process.on('error', (error) => {
-        logger.error('Failed to spawn Claude Code process', { 
-          error, 
-          command: command[0],
-          cwd: resolvedPaths.targetProject 
-        });
-        
-        // More specific error messages
-        if (error.message.includes('ENOENT')) {
-          const errorMsg = `Claude CLI not found at: ${command[0]}. Please check CLAUDE_CLI_PATH setting.`;
-          resolve({ success: false, error: errorMsg });
-        } else {
-          resolve({ success: false, error: error.message });
-        }
-      });
-
-      // Set timeout for long-running commands
-      setTimeout(() => {
-        process.kill('SIGTERM');
-        resolve({ success: false, error: 'Command timeout (5 minutes)' });
-      }, 300000); // 5 minutes timeout
-    });
   }
 
   private estimateTokenUsage(action: string): number {
