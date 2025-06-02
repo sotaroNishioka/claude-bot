@@ -1,4 +1,0 @@
-# Issue メンション用プロンプト
-# Issue の本文で @claude がメンションされた時に使用
-
-{{USER_REQUEST}}
