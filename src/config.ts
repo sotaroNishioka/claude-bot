@@ -12,7 +12,6 @@ export const config: Config = {
     repo: process.env.GITHUB_REPO || '',
   },
   claude: {
-    apiKey: process.env.CLAUDE_API_KEY || '',
     cliPath: process.env.CLAUDE_CLI_PATH || 'claude',
     dailyTokenLimit: Number.parseInt(process.env.DAILY_TOKEN_LIMIT || '45000', 10),
   },
@@ -54,10 +53,6 @@ if (!config.github.token) {
 
 if (!config.github.owner || !config.github.repo) {
   throw new Error('GITHUB_OWNER and GITHUB_REPO are required');
-}
-
-if (!config.claude.apiKey) {
-  console.warn('CLAUDE_API_KEY is not set. Claude Code features will be disabled.');
 }
 
 // パスの検証

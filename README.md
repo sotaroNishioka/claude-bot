@@ -49,6 +49,7 @@ Claude Bot は GitHub リポジトリの `@claude` または `@claude-code` メ�
 - **優雅なエラー処理**: 堅牢なエラー処理と復旧メカニズム
 - **自動応答制御**: メンションへの自動応答のオプション制御
 - **プロセス管理**: 優雅なシャットダウン処理とデーモンモードサポート
+- **同時実行制御**: Claude Code の同時実行数を制限してリソースを保護
 
 ### 開発機能
 - **型安全性**: 厳密な型付けによる完全な TypeScript 実装
@@ -93,7 +94,6 @@ GITHUB_OWNER=your_username
 GITHUB_REPO=your_repository_name
 
 # Claude Code 設定（必須）
-CLAUDE_API_KEY=your_claude_api_key
 CLAUDE_CLI_PATH=/usr/local/bin/claude  # またはカスタムパス
 DAILY_TOKEN_LIMIT=45000
 
@@ -230,7 +230,7 @@ GitHub Issue に関してサポートします。以下のリクエストを分�
 @claude 現在のデータベーススキーマを分析してパフォーマンス改善を提案してください
 ```
 
-**重要**: Claude Code は `target-project` ディレクトリで実行され、ローカルファイルに実際の変更を加えます。
+**重要**: Claude Code は `target-project` ディレクトリで実行され、ローカルファイルに実際の変更を加えます。Claude CLI は事前に `claude auth login` で認証済みである必要があります。
 
 ## 🔧 設定
 
@@ -241,14 +241,13 @@ GitHub Issue に関してサポートします。以下のリクエストを分�
 | `GITHUB_TOKEN` | GitHub パーソナルアクセストークン | - | ✅ |
 | `GITHUB_OWNER` | リポジトリオーナーのユーザー名 | - | ✅ |
 | `GITHUB_REPO` | リポジトリ名 | - | ✅ |
-| `CLAUDE_API_KEY` | Claude Code 用の Claude API キー | - | ✅ |
 | `CLAUDE_CLI_PATH` | Claude CLI 実行ファイルのパス | `claude` | ❌ |
 | `TARGET_PROJECT_PATH` | ターゲットプロジェクトディレクトリのパス | `../target-project` | ❌ |
 | `CLAUDE_BOT_PATH` | Claude Bot ディレクトリのパス | `現在のディレクトリ` | ❌ |
 | `DAILY_TOKEN_LIMIT` | 1日の最大 Claude トークン数 | `45000` | ❌ |
 | `MENTION_PATTERNS` | カンマ区切りメンションパターン | `@claude,@claude-code` | ❌ |
 | `ENABLE_AUTO_RESPONSE` | 自動応答を有効化 | `false` | ❌ |
-| `MAX_CONCURRENT_EXECUTIONS` | Claude Code同時実行数 | `1` | ❌ |
+| `MAX_CONCURRENT_EXECUTIONS` | Claude Code同時実行数（1-10） | `1` | ❌ |
 | `DETECTION_INTERVAL` | メンション検出の Cron 式 | `*/5 * * * *` | ❌ |
 | `BACKUP_INTERVAL` | データベースバックアップの Cron 式 | `0 2 * * *` | ❌ |
 | `LOG_LEVEL` | ログレベル | `info` | ❌ |
@@ -264,6 +263,21 @@ GitHub パーソナルアクセストークンに必要な権限:
 - `repo`（フルリポジトリアクセス） - Issues/PR の読み取りとコメント投稿用
 - `read:org`（組織メンバーシップ読み取り） - 組織リポジトリ用
 
+### Claude CLI 認証
+
+Claude Code CLI は事前認証が必要です:
+
+```bash
+# Claude CLI のインストール
+curl -fsSL https://claude.ai/cli/install.sh | sh
+
+# Claude MAX サブスクリプションで認証
+claude auth login
+
+# 認証状態を確認
+claude auth status
+```
+
 ### Claude Code CLI 引数
 
 Bot は以下の引数で Claude Code を実行:
@@ -273,6 +287,25 @@ Bot は以下の引数で Claude Code を実行:
 - `--verbose` - 詳細ログ
 
 タイムアウト: 実行毎に5分
+
+### 同時実行制御
+
+Bot は Claude Code の同時実行数を制限してリソースを保護します：
+
+- **設定**: `MAX_CONCURRENT_EXECUTIONS` 環境変数で制御（1-10の範囲）
+- **デフォルト**: 1（安全な設定）
+- **動作**: 上限に達した場合、新しいメンションはスキップされログに記録
+- **監視**: ステータス確認で現在の実行数を表示
+
+```env
+# 同時実行例
+MAX_CONCURRENT_EXECUTIONS=3  # 最大3つのClaude Codeを同時実行
+```
+
+**推奨設定:**
+- **個人利用**: 1-2（安定性重視）
+- **チーム利用**: 2-3（効率とリソースのバランス）
+- **高負荷環境**: 3-5（十分なリソースがある場合）
 
 ## 📊 データベーススキーマ
 
@@ -353,6 +386,8 @@ npm run dev -- status
 ```json
 {
   "isRunning": true,
+  "isProcessingMentions": false,
+  "runningExecutions": 2,
   "repository": {
     "name": "my-project",
     "fullName": "user/my-project",
@@ -372,7 +407,8 @@ npm run dev -- status
     "detectionInterval": "*/5 * * * *",
     "backupInterval": "0 2 * * *",
     "dailyTokenLimit": 45000,
-    "mentionPatterns": ["@claude", "@claude-code"]
+    "mentionPatterns": ["@claude", "@claude-code"],
+    "maxConcurrentExecutions": 3
   }
 }
 ```
@@ -410,8 +446,9 @@ Claude Bot は効率的なトークン使用を設計:
 ### スマート処理
 - **変更検出**: 実際に変更されたコンテンツのみを処理（SHA256 比較）
 - **コンテンツハッシュ**: 同じコンテンツの重複処理を防止
-- **日次制限**: 設定可能なトークン予算と自動制限
+- **同時実行制御**: 設定可能な同時実行数でリソース使用量を制限
 - **順次処理**: レート制限を尊重するメンション間の2秒遅延
+- **スキップロジック**: 実行中の処理が上限に達した場合、新しいメンションを安全にスキップ
 
 ### データベース効率性
 - **差分チェック**: 最後のチェック時刻以降の GitHub データのみを取得
@@ -472,6 +509,18 @@ Claude Bot は効率的なトークン使用を設計:
    - デフォルト: 認証済みリクエストで5000リクエスト/時
    - Bot は検出サイクル毎に1回の API 呼び出しを使用
    - 5分間隔では: 12回/時（制限内に十分収まる）
+
+6. **Claude Code 同時実行の問題**:
+   ```bash
+   # 同時実行数を確認
+   npm run dev -- status
+   
+   # 同時実行数を調整（.env で設定）
+   MAX_CONCURRENT_EXECUTIONS=2
+   
+   # ログで実行状況を確認
+   grep "Claude Code実行" ./logs/claude-bot.log
+   ```
 
 ### デバッグモード
 

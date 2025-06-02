@@ -96,7 +96,6 @@ export interface Config {
     repo: string;
   };
   claude: {
-    apiKey: string;
     cliPath: string;
     dailyTokenLimit: number;
   };

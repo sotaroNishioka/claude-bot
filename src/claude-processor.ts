@@ -50,12 +50,6 @@ export class ClaudeProcessor {
         return;
       }
 
-      // Claude APIの利用可能性を確認
-      if (!config.claude.apiKey) {
-        await this.respondWithError(mention, 'Claude API key not configured');
-        return;
-      }
-
       // Claude Code実行数をインクリメント
       ClaudeProcessor.runningExecutions++;
       logger.debug(
@@ -131,7 +125,6 @@ export class ClaudeProcessor {
         cwd: resolvedPaths.targetProject,
         env: {
           ...process.env,
-          CLAUDE_API_KEY: config.claude.apiKey,
         },
       });
 
