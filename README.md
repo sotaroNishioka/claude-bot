@@ -1,1 +1,345 @@
-# Claude Bot 🤖\n\nTypeScript implementation of Claude Code mention detection and automation system for GitHub repositories, designed to run on Raspberry Pi and execute Claude Code CLI on local projects.\n\n## 🎯 Purpose\n\nClaude Bot monitors GitHub repositories for `@claude` mentions and automatically executes Claude Code CLI commands on your local project directory. Perfect for:\n\n- **Raspberry Pi automation**: Always-on monitoring with minimal resource usage\n- **Local development**: Claude Code works directly on your local project files\n- **GitHub integration**: Seamless integration with GitHub Issues and Pull Requests\n- **Token optimization**: Smart change detection to minimize Claude API usage\n\n## 🏗️ Project Structure\n\n```\n/home/pi/Develop/\n├── claude-bot/           # This repository - Claude Bot system\n│   ├── src/\n│   ├── package.json\n│   ├── .env              # Configuration\n│   └── mention_tracker.db\n└── target-project/       # Your project - Claude Code execution target\n    ├── src/\n    ├── README.md\n    ├── package.json\n    └── .git/            # Connected to GitHub\n```\n\n## ✨ Features\n\n- **Smart Mention Detection**: Automatically detects `@claude` mentions in GitHub Issues and PRs\n- **Local Project Execution**: Claude Code CLI runs in your specified target project directory\n- **Configurable CLI Path**: Support for Nodenv, NVM, and custom Claude CLI installations\n- **Token Optimization**: Efficient change detection using SHA256 hashing to minimize Claude Code API usage\n- **SQLite Database**: Reliable tracking of processed content and mention history\n- **Comprehensive Logging**: Detailed logging with Winston for monitoring and debugging\n- **Cron Scheduling**: Configurable intervals for detection and backup operations\n- **Type Safety**: Full TypeScript implementation with strict typing\n- **Multi-Command Support**: Various Claude Code commands (implement, review, analyze, etc.)\n- **Graceful Error Handling**: Robust error handling and recovery mechanisms\n\n## 🚀 Quick Start\n\n### 1. Installation\n\n```bash\n# Create development directory\nmkdir -p /home/pi/Develop\ncd /home/pi/Develop\n\n# Clone Claude Bot\ngit clone https://github.com/sotaroNishioka/claude-bot.git\ncd claude-bot\nnpm install\n\n# Create your target project (or clone existing)\ncd ../\nmkdir target-project  # or: git clone your-project.git target-project\ncd target-project\ngit init  # if new project\n```\n\n### 2. Configuration\n\n```bash\ncd /home/pi/Develop/claude-bot\ncp .env.example .env\n```\n\nEdit `.env` with your settings:\n\n```env\n# GitHub Configuration\nGITHUB_TOKEN=ghp_your_personal_access_token\nGITHUB_OWNER=your_username  \nGITHUB_REPO=your_repository_name\n\n# Claude Code Configuration\nCLAUDE_API_KEY=your_claude_api_key\nCLAUDE_CLI_PATH=/usr/local/bin/claude  # or custom path\nDAILY_TOKEN_LIMIT=45000\n\n# Project Paths\nTARGET_PROJECT_PATH=../target-project\nCLAUDE_BOT_PATH=/home/pi/Develop/claude-bot\n\n# Detection Settings\nDETECTION_INTERVAL=\"*/5 * * * *\"  # Every 5 minutes\n```\n\n### 3. Claude CLI Path Configuration\n\nDepending on your Node.js installation:\n\n```bash\n# Standard installation\nCLAUDE_CLI_PATH=/usr/local/bin/claude\n\n# Nodenv\nCLAUDE_CLI_PATH=/home/pi/.nodenv/shims/claude\n\n# NVM\nCLAUDE_CLI_PATH=/home/pi/.nvm/versions/node/v18.19.0/bin/claude\n\n# Custom installation\nCLAUDE_CLI_PATH=/home/pi/.local/bin/claude\n```\n\n### 4. Setup and Test\n\n```bash\nnpm run build\nnpm run setup\nnpm run dev -- test-config\n```\n\n### 5. Run\n\n```bash\n# Development mode\nnpm run dev -- start\n\n# Production mode  \nnpm run build && npm start\n\n# Single detection cycle (testing)\nnpm run dev -- run-once\n```\n\n## 📖 Usage\n\nOnce running, Claude Bot will automatically detect `@claude` mentions in:\n\n- ✅ Issue descriptions\n- ✅ Issue comments  \n- ✅ Pull Request descriptions\n- ✅ Pull Request comments\n\n### Available Commands\n\n| Command | Description | Example |\n|---------|-------------|----------|\n| `@claude implement [details]` | Implement the issue/PR in target project | `@claude implement with error handling` |\n| `@claude review [focus]` | Code review with specific focus | `@claude review security and performance` |\n| `@claude analyze [aspect]` | Analyze code or requirements | `@claude analyze architecture patterns` |\n| `@claude improve [area]` | Suggest improvements | `@claude improve error handling` |\n| `@claude test [type]` | Generate tests | `@claude test unit tests for edge cases` |\n| `@claude help` | Show help message | `@claude help` |\n\n### Example Mentions\n\n```\n@claude implement this authentication feature with JWT tokens and proper error handling\n\n@claude review this PR, especially looking at memory usage and potential security vulnerabilities\n\n@claude analyze the current database schema and suggest performance improvements\n```\n\n**Important**: Claude Code will execute in your `target-project` directory, making actual changes to your local files.\n\n## 🔧 Configuration\n\n### Environment Variables\n\n| Variable | Description | Default |\n|----------|-------------|---------|\n| `GITHUB_TOKEN` | GitHub Personal Access Token | **Required** |\n| `GITHUB_OWNER` | Repository owner username | **Required** |\n| `GITHUB_REPO` | Repository name | **Required** |\n| `CLAUDE_API_KEY` | Claude API key for Claude Code | **Required** |\n| `CLAUDE_CLI_PATH` | Path to Claude CLI executable | `claude` |\n| `TARGET_PROJECT_PATH` | Path to target project directory | `../target-project` |\n| `CLAUDE_BOT_PATH` | Path to Claude Bot directory | `current directory` |\n| `DAILY_TOKEN_LIMIT` | Maximum Claude tokens per day | `45000` |\n| `DETECTION_INTERVAL` | Cron expression for mention detection | `*/5 * * * *` |\n| `BACKUP_INTERVAL` | Cron expression for database backup | `0 2 * * *` |\n| `LOG_LEVEL` | Logging level (debug, info, warn, error) | `info` |\n| `DATABASE_PATH` | SQLite database file path | `./mention_tracker.db` |\n\n### GitHub Token Permissions\n\nRequired permissions for GitHub Personal Access Token:\n- `repo` (Full repository access)\n- `read:org` (Read organization membership)\n\n## 🐳 Deployment Options\n\n### Raspberry Pi (Recommended)\n\nPerfect for always-on monitoring with minimal resource usage:\n\n```bash\n# Install Node.js\ncurl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -\nsudo apt-get install -y nodejs\n\n# Install Claude CLI\ncurl -fsSL https://claude.ai/cli/install.sh | sh\nclaude auth login\n\n# Setup as systemd service\nsudo cp deployment/claude-bot.service /etc/systemd/system/\nsudo systemctl enable claude-bot\nsudo systemctl start claude-bot\n```\n\n### Docker\n\n```bash\ndocker build -t claude-bot .\ndocker run -d --name claude-bot --env-file .env -v /path/to/target-project:/app/target-project claude-bot\n```\n\n### PM2 (Process Manager)\n\n```bash\nnpm install -g pm2\npm2 start ecosystem.config.js\npm2 startup\npm2 save\n```\n\n## 📊 Monitoring\n\n### Status Check\n\n```bash\nnpm run dev -- status\n```\n\nOutput example:\n```json\n{\n  \"isRunning\": true,\n  \"repository\": {\n    \"name\": \"my-project\",\n    \"language\": \"TypeScript\",\n    \"stars\": 42\n  },\n  \"todayStats\": {\n    \"totalChecks\": 288,\n    \"newMentions\": 5,\n    \"processedMentions\": 5,\n    \"tokensUsed\": 12500\n  },\n  \"configuration\": {\n    \"targetProject\": \"/home/pi/Develop/target-project\",\n    \"claudeCli\": \"/home/pi/.nodenv/shims/claude\"\n  }\n}\n```\n\n### Logs\n\n```bash\n# View real-time logs\ntail -f ./logs/claude-bot.log\n\n# View error logs only\ngrep ERROR ./logs/claude-bot.log\n\n# View today's mention activity\ngrep \"mention detected\" ./logs/claude-bot.log | grep $(date +%Y-%m-%d)\n```\n\n## 🎯 Token Optimization\n\nClaude Bot is designed for efficient token usage:\n\n- **Change Detection**: Only processes content that has actually changed\n- **Content Hashing**: SHA256 comparison prevents duplicate processing  \n- **Daily Limits**: Configurable token budgets with automatic enforcement\n- **Smart Scheduling**: Non-critical tasks run during low-usage hours\n\n### Token Usage Estimates\n\n| Action | Estimated Tokens | Description |\n|--------|------------------|-------------|\n| `implement` | 3000-8000 | Code generation and PR creation |\n| `review` | 1500-3000 | Code analysis and feedback |\n| `analyze` | 1000-2000 | Requirements and architecture analysis |\n| `improve` | 2000-2500 | Optimization suggestions |\n| `test` | 1500-2000 | Test generation |\n| `help` | 0 | Static response |\n\n## 🔍 Troubleshooting\n\n### Common Issues\n\n1. **Claude CLI not found**:\n   ```bash\n   # Check if Claude CLI is installed\n   which claude\n   \n   # Update CLAUDE_CLI_PATH in .env\n   CLAUDE_CLI_PATH=/full/path/to/claude\n   ```\n\n2. **Target project not found**:\n   ```bash\n   # Verify target project exists\n   ls -la ../target-project\n   \n   # Update TARGET_PROJECT_PATH in .env\n   TARGET_PROJECT_PATH=/full/path/to/target-project\n   ```\n\n3. **Permission issues**:\n   ```bash\n   # Ensure write permissions to target project\n   chmod 755 ../target-project\n   \n   # Check if target project is a git repository\n   cd ../target-project && git status\n   ```\n\n### Debug Mode\n\n```bash\n# Enable debug logging\nDEBUG=true LOG_LEVEL=debug npm run dev -- start\n```\n\n## 📚 Documentation\n\n- [Setup Guide](./docs/SETUP.md) - Detailed installation and configuration\n- [API Reference](./docs/API.md) - Complete API documentation\n- [Troubleshooting](./docs/TROUBLESHOOTING.md) - Common issues and solutions\n\n## 🤝 Support\n\n- 📖 Check the [documentation](./docs/)\n- 🐛 Report issues on [GitHub Issues](https://github.com/sotaroNishioka/claude-bot/issues)\n- 💬 Ask questions in [GitHub Discussions](https://github.com/sotaroNishioka/claude-bot/discussions)\n\n## 📄 License\n\nThis project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.\n\n## 🙏 Acknowledgments\n\n- [Claude Code](https://claude.ai/code) - AI-powered development automation\n- [Octokit](https://github.com/octokit/octokit.js) - GitHub API client\n- [Winston](https://github.com/winstonjs/winston) - Logging library\n- [node-cron](https://github.com/node-cron/node-cron) - Task scheduling\n\n---\n\n**Made with ❤️ for efficient Claude Code automation on Raspberry Pi**"
+# Claude Bot 🤖
+
+TypeScript implementation of Claude Code mention detection and automation system for GitHub repositories, designed to run on Raspberry Pi and execute Claude Code CLI on local projects.
+
+## 🎯 Purpose
+
+Claude Bot monitors GitHub repositories for `@claude` mentions and automatically executes Claude Code CLI commands on your local project directory. Perfect for:
+
+- **Raspberry Pi automation**: Always-on monitoring with minimal resource usage
+- **Local development**: Claude Code works directly on your local project files
+- **GitHub integration**: Seamless integration with GitHub Issues and Pull Requests
+- **Token optimization**: Smart change detection to minimize Claude API usage
+
+## 🗂️ Project Structure
+
+```
+/home/pi/Develop/
+├── claude-bot/            # This repository - Claude Bot system
+│   ├── src/
+│   ├── package.json
+│   ├── .env               # Configuration
+│   └── mention_tracker.db
+└── target-project/        # Your project - Claude Code execution target
+    ├── src/
+    ├── README.md
+    ├── package.json
+    └── .git/              # Connected to GitHub
+```
+
+## ✨ Features
+
+- **Smart Mention Detection**: Automatically detects `@claude` mentions in GitHub Issues and PRs
+- **Local Project Execution**: Claude Code CLI runs in your specified target project directory
+- **Configurable CLI Path**: Support for Nodenv, NVM, and custom Claude CLI installations
+- **Token Optimization**: Efficient change detection using SHA256 hashing to minimize Claude Code API usage
+- **SQLite Database**: Reliable tracking of processed content and mention history
+- **Comprehensive Logging**: Detailed logging with Winston for monitoring and debugging
+- **Cron Scheduling**: Configurable intervals for detection and backup operations
+- **Type Safety**: Full TypeScript implementation with strict typing
+
+- **Multi-Command Support**: Various Claude Code commands (implement, review, analyze, etc.)
+- **Graceful Error Handling**: Robust error handling and recovery mechanisms
+
+## 🚀 Quick Start
+
+### 1. Installation
+
+```bash
+# Create development directory
+mkdir -p /home/pi/Develop
+cd /home/pi/Develop
+
+# Clone Claude Bot
+git clone https://github.com/sotaroNishioka/claude-bot.git
+cd claude-bot
+npm install
+
+# Create your target project (or clone existing)
+cd ../
+mkdir target-project  # or: git clone your-project.git target-project
+cd target-project
+git init  # if new project
+```
+
+### 2. Configuration
+
+```bash
+cd /home/pi/Develop/claude-bot
+cp .env.example .env
+```
+
+Edit `.env` with your settings:
+
+```env
+# GitHub Configuration
+GITHUB_TOKEN=ghp_your_personal_access_token
+GITHUB_OWNER=your_username  
+GITHUB_REPO=your_repository_name
+
+# Claude Code Configuration
+CLAUDE_API_KEY=your_claude_api_key
+CLAUDE_CLI_PATH=/usr/local/bin/claude  # or custom path
+DAILY_TOKEN_LIMIT=45000
+
+# Project Paths
+TARGET_PROJECT_PATH=../target-project
+CLAUDE_BOT_PATH=/home/pi/Develop/claude-bot
+
+# Detection Settings
+DETECTION_INTERVAL="*/5 * * * *"  # Every 5 minutes
+```
+
+### 3. Claude CLI Path Configuration
+
+Depending on your Node.js installation:
+
+```bash
+# Standard installation
+CLAUDE_CLI_PATH=/usr/local/bin/claude
+
+# Nodenv
+CLAUDE_CLI_PATH=/home/pi/.nodenv/shims/claude
+
+# NVM
+CLAUDE_CLI_PATH=/home/pi/.nvm/versions/node/v18.19.0/bin/claude
+
+# Custom installation
+CLAUDE_CLI_PATH=/home/pi/.local/bin/claude
+```
+
+### 4. Setup and Test
+
+```bash
+npm run build
+npm run setup
+npm run dev -- test-config
+```
+
+### 5. Run
+
+```bash
+# Development mode
+npm run dev -- start
+
+# Production mode  
+npm run build && npm start
+
+# Single detection cycle (testing)
+npm run dev -- run-once
+```
+
+## 📖 Usage
+
+Once running, Claude Bot will automatically detect `@claude` mentions in:
+
+- ✅ Issue descriptions
+- ✅ Issue comments  
+- ✅ Pull Request descriptions
+- ✅ Pull Request comments
+
+### Available Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `@claude implement [details]` | Implement the issue/PR in target project | `@claude implement with error handling` |
+| `@claude review [focus]` | Code review with specific focus | `@claude review security and performance` |
+| `@claude analyze [aspect]` | Analyze code or requirements | `@claude analyze architecture patterns` |
+| `@claude improve [area]` | Suggest improvements | `@claude improve error handling` |
+| `@claude test [type]` | Generate tests | `@claude test unit tests for edge cases` |
+| `@claude help` | Show help message | `@claude help` |
+
+### Example Mentions
+
+```
+@claude implement this authentication feature with JWT tokens and proper error handling
+
+@claude review this PR, especially looking at memory usage and potential security vulnerabilities
+
+@claude analyze the current database schema and suggest performance improvements
+```
+
+**Important**: Claude Code will execute in your `target-project` directory, making actual changes to your local files.
+
+## 🔧 Configuration
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GITHUB_TOKEN` | GitHub Personal Access Token | **Required** |
+| `GITHUB_OWNER` | Repository owner username | **Required** |
+| `GITHUB_REPO` | Repository name | **Required** |
+| `CLAUDE_API_KEY` | Claude API key for Claude Code | **Required** |
+| `CLAUDE_CLI_PATH` | Path to Claude CLI executable | `claude` |
+| `TARGET_PROJECT_PATH` | Path to target project directory | `../target-project` |
+| `CLAUDE_BOT_PATH` | Path to Claude Bot directory | `current directory` |
+| `DAILY_TOKEN_LIMIT` | Maximum Claude tokens per day | `45000` |
+| `DETECTION_INTERVAL` | Cron expression for mention detection | `*/5 * * * *` |
+| `BACKUP_INTERVAL` | Cron expression for database backup | `0 2 * * *` |
+| `LOG_LEVEL` | Logging level (debug, info, warn, error) | `info` |
+| `DATABASE_PATH` | SQLite database file path | `./mention_tracker.db` |
+
+### GitHub Token Permissions
+
+Required permissions for GitHub Personal Access Token:
+- `repo` (Full repository access)
+- `read:org` (Read organization membership)
+
+## 📳 Deployment Options
+
+### Raspberry Pi (Recommended)
+
+Perfect for always-on monitoring with minimal resource usage:
+
+```bash
+# Install Node.js
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Install Claude CLI
+curl -fsSL https://claude.ai/cli/install.sh | sh
+claude auth login
+
+# Setup as systemd service
+sudo cp deployment/claude-bot.service /etc/systemd/system/
+sudo systemctl enable claude-bot
+sudo systemctl start claude-bot
+```
+
+### PM2 (Process Manager)
+
+```bash
+npm install -g pm2
+pm2 start ecosystem.config.js
+pm2 startup
+pm2 save
+```
+
+## 📊 Monitoring
+
+### Status Check
+
+```bash
+npm run dev -- status
+```
+
+Output example:
+```json
+{
+  "isRunning": true,
+  "repository": {
+    "name": "my-project",
+    "language": "TypeScript",
+    "stars": 42
+  },
+  "todayStats": {
+    "totalChecks": 288,
+    "newMentions": 5,
+    "processedMentions": 5,
+    "tokensUsed": 12500
+  },
+  "configuration": {
+    "targetProject": "/home/pi/Develop/target-project",
+    "claudeCli": "/home/pi/.nodenv/shims/claude"
+  }
+}
+```
+
+### Logs
+
+```bash
+# View real-time logs
+tail -f ./logs/claude-bot.log
+
+# View error logs only
+grep ERROR ./logs/claude-bot.log
+
+# View today's mention activity
+grep "mention detected" ./logs/claude-bot.log | grep $(date +%Y-%m-%d)
+```
+
+## 🎯 Token Optimization
+
+Claude Bot is designed for efficient token usage:
+
+- **Change Detection**: Only processes content that has actually changed
+- **Content Hashing**: SHA256 comparison prevents duplicate processing  
+- **Daily Limits**: Configurable token budgets with automatic enforcement
+- **Smart Scheduling**: Non-critical tasks run during low-usage hours
+
+### Token Usage Estimates
+
+| Action | Estimated Tokens | Description |
+|--------|------------------|-------------|
+| `implement` | 3000-8000 | Code generation and PR creation |
+| `review` | 1500-3000 | Code analysis and feedback |
+| `analyze` | 1000-2000 | Requirements and architecture analysis |
+| `improve` | 2000-2500 | Optimization suggestions |
+| `test` | 1500-2000 | Test generation |
+| `help` | 0 | Static response |
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+1. **Claude CLI not found**:
+   ```bash
+   # Check if Claude CLI is installed
+   which claude
+   
+   # Update CLAUDE_CLI_PATH in .env
+   CLAUDE_CLI_PATH=/full/path/to/claude
+   ```
+
+2. **Target project not found**:
+   ```bash
+   # Verify target project exists
+   ls -la ../target-project
+   
+   # Update TARGET_PROJECT_PATH in .env
+   TARGET_PROJECT_PATH=/full/path/to/target-project
+   ```
+
+3. **Permission issues**:
+   ```bash
+   # Ensure write permissions to target project
+   chmod 755 ../target-project
+   
+   # Check if target project is a git repository
+   cd ../target-project && git status
+   ```
+
+### Debug Mode
+
+```bash
+# Enable debug logging
+DEBUG=true LOG_LEVEL=debug npm run dev -- start
+```
+
+## 📚 Documentation
+
+- [Setup Guide](./docs/SETUP.md) - Detailed installation and configuration
+- [API Reference](./docs/API.md) - Complete API documentation
+- [Troubleshooting](./docs/TROUBLESHOOTING.md) - Common issues and solutions
+
+## 🤝 Support
+
+- 📖 Check the [documentation](./docs/)
+- 🐛 Report issues on [GitHub Issues](https://github.com/sotaroNishioka/claude-bot/issues)
+- 💬 Ask questions in [GitHub Discussions](https://github.com/sotaroNishioka/claude-bot/discussions)
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [Claude Code](https://claude.ai/code) - AI-powered development automation
+- [Octokit](https://github.com/octokit/octokit.js) - GitHub API client
+- [Winston](https://github.com/winstonjs/winston) - Logging library
+- [node-cron](https://github.com/node-cron/node-cron) - Task scheduling
+
+---
+
+**Made with ❤️ for efficient Claude Code automation on Raspberry Pi**
