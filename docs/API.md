@@ -529,7 +529,7 @@ SELECT 'processing_stats', COUNT(*) FROM processing_stats;
 ### コマンド構造
 
 ```bash
-npm run dev -- [command] [options]
+npm run start -- [command] [options]
 ```
 
 ### 利用可能なコマンド
@@ -543,8 +543,8 @@ Claude Bot を開始。
 
 **例:**
 ```bash
-npm run dev -- start
-npm run dev -- start --daemon
+npm run start -- start
+npm run start -- start --daemon
 ```
 
 #### `run-once`
@@ -557,7 +557,7 @@ npm run dev -- start --daemon
 
 **例:**
 ```bash
-npm run dev -- run-once
+npm run start -- run-once
 ```
 
 #### `status`

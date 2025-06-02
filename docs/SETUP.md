@@ -263,7 +263,7 @@ cd ../claude-bot
 npm run setup
 
 # 設定をテスト
-npm run dev -- test-config
+npm run start -- test-config
 ```
 
 **期待される出力例:**
@@ -590,7 +590,7 @@ docker-compose up -d
 docker-compose logs -f claude-bot
 
 # コンテナ内でコマンド実行
-docker-compose exec claude-bot npm run dev -- status
+docker-compose exec claude-bot npm run start -- status
 
 # サービス停止
 docker-compose down
@@ -628,7 +628,7 @@ df -h
 ```bash
 # Bot のステータス確認
 cd /home/pi/Develop/claude-bot
-npm run dev -- status
+npm run start -- status
 
 # 今日の統計確認
 sqlite3 mention_tracker.db "SELECT * FROM processing_stats WHERE date = date('now');"
@@ -748,7 +748,7 @@ find ./logs -name "*.log.*" -mtime +30 -delete
 
 # Bot のステータス確認
 echo "Bot ステータス確認..."
-npm run dev -- status | head -20
+npm run start -- status | head -20
 
 # システムリソース確認
 echo "システムリソース確認..."

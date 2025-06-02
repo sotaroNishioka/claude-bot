@@ -145,24 +145,24 @@ CLAUDE_CLI_PATH=/home/pi/.local/bin/claude
 
 ```bash
 npm run build
-npm run setup
-npm run dev -- test-config
+npm run start -- setup
+npm run start -- test-config
 ```
 
 ### 5. 実行
 
 ```bash
 # 開発モード
-npm run dev -- start
+npm run start -- start
 
 # 本番モード  
-npm run build && npm start
+npm run build && npm run start -- start
 
 # 単発検出サイクル（テスト用）
-npm run dev -- run-once
+npm run start -- run-once
 
 # デーモンモード
-npm run daemon
+npm run start -- start --daemon
 ```
 
 ## 📖 使用方法
@@ -171,11 +171,13 @@ npm run daemon
 
 | コマンド | 説明 | 使用方法 |
 |---------|-------------|-------|
-| `start` | Claude Bot デーモンを開始 | `npm run dev -- start [--daemon]` |
-| `run-once` | 単発検出サイクルを実行 | `npm run dev -- run-once` |
-| `status` | 現在のステータスと統計情報を表示 | `npm run dev -- status` |
-| `setup` | データベースをセットアップし接続をテスト | `npm run setup` |
-| `test-config` | 設定と接続をテスト | `npm run dev -- test-config` |
+| `start` | Claude Bot デーモンを開始 | `npm run start -- start [--daemon]` |
+| `stop` | Claude Bot デーモンを停止 | `npm run start -- stop` |
+| `ps` | デーモンの実行状況を確認 | `npm run start -- ps` |
+| `run-once` | 単発検出サイクルを実行 | `npm run start -- run-once` |
+| `status` | 現在のステータスと統計情報を表示 | `npm run start -- status` |
+| `setup` | データベースをセットアップし接続をテスト | `npm run start -- setup` |
+| `test-config` | 設定と接続をテスト | `npm run start -- test-config` |
 
 ### メンション検出
 
@@ -395,10 +397,27 @@ nohup npm start > /dev/null 2>&1 &
 
 ## 📊 監視
 
+### デーモンプロセスの管理
+
+```bash
+# デーモンの実行状況を確認
+npm run start -- ps
+
+# デーモンを開始
+npm run start -- start --daemon
+
+# デーモンを停止
+npm run start -- stop
+```
+
 ### ステータス確認
 
 ```bash
-npm run dev -- status
+# 詳細なアプリケーション状態確認
+npm run start -- status
+
+# プロセス状況の簡易確認
+npm run start -- ps
 ```
 
 出力例:
@@ -489,7 +508,7 @@ Claude Bot は効率的なトークン使用を設計:
 1. **Claude CLI が見つからない**:
    ```bash
    # Claude CLI パスをテスト
-   npm run dev -- test-config
+   npm run start -- test-config
    
    # Claude CLI がインストールされているか確認
    which claude
@@ -504,7 +523,7 @@ Claude Bot は効率的なトークン使用を設計:
    ls -la $TARGET_PROJECT_PATH
    
    # 設定を確認
-   npm run dev -- test-config
+   npm run start -- test-config
    ```
 
 3. **権限の問題**:
@@ -531,7 +550,7 @@ Claude Bot は効率的なトークン使用を設計:
 6. **Claude Code 同時実行の問題**:
    ```bash
    # 同時実行数を確認
-   npm run dev -- status
+   npm run start -- status
    
    # 同時実行数を調整（.env で設定）
    MAX_CONCURRENT_EXECUTIONS=2
@@ -544,10 +563,10 @@ Claude Bot は効率的なトークン使用を設計:
 
 ```bash
 # デバッグログを有効化
-DEBUG=true LOG_LEVEL=debug npm run dev -- start
+DEBUG=true LOG_LEVEL=debug npm run start -- start
 
 # デバッグで単発サイクルをテスト
-DEBUG=true LOG_LEVEL=debug npm run dev -- run-once
+DEBUG=true LOG_LEVEL=debug npm run start -- run-once
 ```
 
 ### エラー応答

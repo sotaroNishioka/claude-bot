@@ -4,6 +4,7 @@ import { Command } from 'commander';
 import { ClaudeBotApp } from './app';
 import { config } from './config';
 import { logger } from './logger';
+import { PidManager } from './pid-manager';
 
 const program = new Command();
 
@@ -17,19 +18,35 @@ program
   .description('Start the Claude Bot daemon')
   .option('-d, --daemon', 'Run as daemon')
   .action(async (options) => {
-    const app = new ClaudeBotApp();
-
-    if (options.daemon) {
-      logger.info('Starting Claude Bot as daemon...');
-    }
-
     try {
+      // 既に実行中かチェック
+      const status = await PidManager.getDaemonStatus();
+      if (status.isRunning) {
+        console.log(`❌ Claude Bot は既に実行中です (PID: ${status.pid})`);
+        process.exit(1);
+      }
+
+      // 古いPIDファイルがあれば削除
+      if (status.pid && !status.processExists) {
+        await PidManager.removePidFile();
+      }
+
+      const app = new ClaudeBotApp();
+
+      if (options.daemon) {
+        logger.info('Starting Claude Bot as daemon...');
+      }
+
+      // PIDファイルを作成
+      await PidManager.writePidFile();
+
       await app.start();
 
       // プロセスを実行状態に保つ
       process.stdin.resume();
     } catch (error) {
       logger.error('Failed to start Claude Bot', { error });
+      await PidManager.removePidFile();
       process.exit(1);
     }
   });
@@ -100,6 +117,78 @@ program
     } catch (error) {
       logger.error('Setup failed', { error });
       console.error('\n❌ Setup failed. Please check the logs and your configuration.');
+      process.exit(1);
+    }
+  });
+
+program
+  .command('ps')
+  .description('Show daemon process status')
+  .action(async () => {
+    try {
+      const status = await PidManager.getDaemonStatus();
+      
+      console.log('📊 Claude Bot Daemon Status:');
+      console.log(`- Running: ${status.isRunning ? '✅ Yes' : '❌ No'}`);
+      console.log(`- PID: ${status.pid || 'N/A'}`);
+      console.log(`- PID File: ${status.pidFile}`);
+      
+      if (status.pid && !status.processExists) {
+        console.log('⚠️  Warning: PID file exists but process not found (stale PID file)');
+      }
+      
+      if (status.isRunning) {
+        // 追加の情報を取得
+        try {
+          const app = new ClaudeBotApp();
+          const appStatus = await app.getStatus();
+          
+          console.log('\n📈 Application Status:');
+          console.log(`- Processing Mentions: ${appStatus.isProcessingMentions ? '🔄 Yes' : '💤 No'}`);
+          console.log(`- Running Executions: ${appStatus.runningExecutions}`);
+          console.log(`- Repository: ${appStatus.repository.fullName}`);
+          
+          if (appStatus.todayStats) {
+            console.log('\n📊 Today\'s Statistics:');
+            console.log(`- Total Checks: ${appStatus.todayStats.totalChecks}`);
+            console.log(`- New Mentions: ${appStatus.todayStats.newMentions}`);
+            console.log(`- Processed Mentions: ${appStatus.todayStats.processedMentions}`);
+            console.log(`- API Calls: ${appStatus.todayStats.apiCalls}`);
+            console.log(`- Tokens Used: ${appStatus.todayStats.tokensUsed || 0}`);
+          }
+        } catch (error) {
+          console.log('\n⚠️  Could not get detailed application status');
+        }
+      }
+      
+      process.exit(0);
+    } catch (error) {
+      logger.error('Failed to get daemon status', { error });
+      console.error('❌ Failed to get daemon status:', error instanceof Error ? error.message : String(error));
+      process.exit(1);
+    }
+  });
+
+program
+  .command('stop')
+  .description('Stop the Claude Bot daemon')
+  .action(async () => {
+    try {
+      console.log('🛑 Stopping Claude Bot daemon...');
+      
+      const success = await PidManager.stopDaemon();
+      
+      if (success) {
+        console.log('✅ Claude Bot daemon stopped successfully');
+      } else {
+        console.log('❌ Failed to stop daemon or daemon was not running');
+        process.exit(1);
+      }
+      
+      process.exit(0);
+    } catch (error) {
+      logger.error('Failed to stop daemon', { error });
+      console.error('❌ Failed to stop daemon:', error instanceof Error ? error.message : String(error));
       process.exit(1);
     }
   });

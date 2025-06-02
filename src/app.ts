@@ -5,6 +5,7 @@ import { MentionTracker } from './database';
 import { GitHubClient } from './github-client';
 import { logger } from './logger';
 import { MentionDetector } from './mention-detector';
+import { PidManager } from './pid-manager';
 
 export class ClaudeBotApp {
   private githubClient: GitHubClient;
@@ -261,9 +262,11 @@ export class ClaudeBotApp {
 
       try {
         await this.stop();
+        await PidManager.removePidFile();
         process.exit(0);
       } catch (error) {
         logger.error('シャットダウン中のエラー', { error });
+        await PidManager.removePidFile();
         process.exit(1);
       }
     };
