@@ -11,7 +11,7 @@ export class ClaudeBotApp {
   private tracker: MentionTracker;
   private detector: MentionDetector;
   private processor: ClaudeProcessor;
-  private isRunning: boolean = false;
+  private isRunning = false;
   private detectionJob: cron.ScheduledTask | null = null;
   private backupJob: cron.ScheduledTask | null = null;
 
@@ -191,7 +191,7 @@ export class ClaudeBotApp {
       const backupPath = `./backups/mention_tracker_${timestamp}.db`;
       
       // Ensure backup directory exists
-      const { mkdir } = await import('fs/promises');
+      const { mkdir } = await import('node:fs/promises');
       await mkdir('./backups', { recursive: true });
       
       await this.tracker.backup(backupPath);
@@ -208,8 +208,8 @@ export class ClaudeBotApp {
 
   private async cleanupOldBackups(): Promise<void> {
     try {
-      const { readdir, stat, unlink } = await import('fs/promises');
-      const { join } = await import('path');
+      const { readdir, stat, unlink } = await import('node:fs/promises');
+      const { join } = await import('node:path');
       
       const backupDir = './backups';
       const files = await readdir(backupDir);
