@@ -13,9 +13,9 @@
     "format": "npx @biomejs/biome format --write .",
     "format:check": "npx @biomejs/biome format .",
     "lint": "npx @biomejs/biome lint .",
-    "lint:fix": "npx @biomejs/biome lint --apply .",
+    "lint:fix": "npx @biomejs/biome lint --write .",
     "check": "npx @biomejs/biome check .",
-    "check:fix": "npx @biomejs/biome check --apply .",
+    "check:fix": "npx @biomejs/biome check --write .",
     "type-check": "tsc --noEmit"
   },
   "keywords": [
