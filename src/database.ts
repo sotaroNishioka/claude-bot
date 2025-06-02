@@ -109,7 +109,7 @@ export class MentionTracker {
         return true;
       }
 
-      if (existing.content_hash !== contentHash) {
+      if (existing.contentHash !== contentHash) {
         // Content changed
         await this.updateItem(itemType, itemId, contentHash, content.includes('@claude'));
         return true;
@@ -233,9 +233,10 @@ export class MentionTracker {
 
   async getTodayStats(): Promise<ProcessingStats | null> {
     const today = new Date().toISOString().split('T')[0];
-    return await this.db.get<ProcessingStats>('SELECT * FROM processing_stats WHERE date = ?', [
+    const result = await this.db.get<ProcessingStats | undefined>('SELECT * FROM processing_stats WHERE date = ?', [
       today,
     ]);
+    return result || null;
   }
 
   async close(): Promise<void> {
@@ -247,7 +248,9 @@ export class MentionTracker {
 
   async backup(backupPath: string): Promise<void> {
     try {
-      await this.db.backup(backupPath);
+      // SQLiteデータベースのバックアップは、ファイルシステムレベルでのコピーで行う
+      const fs = await import('node:fs/promises');
+      await fs.copyFile(config.database.path, backupPath);
       logger.info('Database backup created', { backupPath });
     } catch (error) {
       logger.error('Database backup failed', { error, backupPath });
