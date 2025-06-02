@@ -14,6 +14,7 @@ export const config: Config = {
   claude: {
     apiKey: process.env.CLAUDE_API_KEY || '',
     cliPath: process.env.CLAUDE_CLI_PATH || 'claude',
+    dailyTokenLimit: parseInt(process.env.DAILY_TOKEN_LIMIT || '45000', 10),
   },
   project: {
     targetPath: process.env.TARGET_PROJECT_PATH || '../target-project',
@@ -83,6 +84,12 @@ if (config.claude.cliPath !== 'claude') {
   }
 }
 
+// Daily token limit validation
+if (config.claude.dailyTokenLimit <= 0) {
+  console.warn('DAILY_TOKEN_LIMIT should be a positive number. Using default: 45000');
+  config.claude.dailyTokenLimit = 45000;
+}
+
 // Export resolved paths for use in other modules
 export const resolvedPaths = {
   targetProject: resolve(config.project.targetPath),
@@ -96,4 +103,5 @@ console.log('Configuration loaded:', {
   claudeCli: config.claude.cliPath,
   promptsDir: resolvedPaths.prompts,
   environment: config.system.environment,
+  dailyTokenLimit: config.claude.dailyTokenLimit,
 });
